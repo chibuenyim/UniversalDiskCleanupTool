@@ -23,7 +23,6 @@ function Install-PowerShellCoreWinget {
     $form.MinimizeBox = $false
     $form.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
 
-    # Title
     $title = New-Object System.Windows.Forms.Label
     $title.Text = "Installing PowerShell 7+..."
     $title.Location = New-Object System.Drawing.Point(20, 20)
@@ -32,7 +31,6 @@ function Install-PowerShellCoreWinget {
     $title.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($title)
 
-    # Message
     $message = New-Object System.Windows.Forms.Label
     $message.Text = "Please wait while we install PowerShell 7+ for you..."
     $message.Location = New-Object System.Drawing.Point(20, 60)
@@ -45,7 +43,6 @@ function Install-PowerShellCoreWinget {
     $form.Refresh()
 
     try {
-        # Use winget to install PowerShell
         $process = Start-Process -FilePath "winget" -ArgumentList "install", "--id", "Microsoft.PowerShell", "--accept-package-agreements", "--accept-source-agreements", "-e" -Wait -PassThru -WindowStyle Hidden
 
         $form.Close()
@@ -89,7 +86,6 @@ function Show-InstallDialog {
     $form.MinimizeBox = $false
     $form.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
 
-    # Title
     $title = New-Object System.Windows.Forms.Label
     $title.Text = "PowerShell 7+ Required"
     $title.Location = New-Object System.Drawing.Point(20, 20)
@@ -98,7 +94,6 @@ function Show-InstallDialog {
     $title.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($title)
 
-    # Message
     $message = New-Object System.Windows.Forms.Label
     $message.Text = "This tool requires PowerShell 7+ (pwsh) to run.`n`nWe can install it for you automatically, or you can install it manually."
     $message.Location = New-Object System.Drawing.Point(20, 70)
@@ -107,7 +102,6 @@ function Show-InstallDialog {
     $message.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
     $form.Controls.Add($message)
 
-    # Auto-install button
     $autoBtn = New-Object System.Windows.Forms.Button
     $autoBtn.Text = "Install Automatically"
     $autoBtn.Location = New-Object System.Drawing.Point(20, 170)
@@ -128,7 +122,6 @@ function Show-InstallDialog {
     })
     $form.Controls.Add($autoBtn)
 
-    # Manual button
     $manualBtn = New-Object System.Windows.Forms.Button
     $manualBtn.Text = "Download Manually"
     $manualBtn.Location = New-Object System.Drawing.Point(20, 230)
@@ -144,7 +137,6 @@ function Show-InstallDialog {
     })
     $form.Controls.Add($manualBtn)
 
-    # Cancel button
     $cancelBtn = New-Object System.Windows.Forms.Button
     $cancelBtn.Text = "Cancel"
     $cancelBtn.Location = New-Object System.Drawing.Point(255, 230)
@@ -159,7 +151,6 @@ function Show-InstallDialog {
     })
     $form.Controls.Add($cancelBtn)
 
-    # Info
     $info = New-Object System.Windows.Forms.Label
     $info.Text = "Automatic installation requires Windows Package Manager (winget)."
     $info.Location = New-Object System.Drawing.Point(20, 290)
@@ -172,11 +163,9 @@ function Show-InstallDialog {
     $form.Dispose()
 }
 
-# Main
 if (Test-Winget) {
     Show-InstallDialog
 } else {
-    # No winget available, show manual download dialog
     $result = [System.Windows.Forms.MessageBox]::Show(
         "PowerShell 7+ is required but not installed.`n`nWould you like to download it now?",
         "PowerShell 7+ Required",
