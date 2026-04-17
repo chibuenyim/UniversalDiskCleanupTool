@@ -1,15 +1,21 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Universal Disk Cleanup Tool v3.0 - Cross-platform disk cleanup utility
+    Universal Disk Cleanup Tool v4.0 - Cross-platform disk cleanup utility
 .DESCRIPTION
-    Comprehensive cleanup for Windows, macOS, and Linux with enhanced support for:
+    Comprehensive cleanup for Windows, macOS, and Linux with advanced features:
     - 60+ application cache locations
     - 15+ package managers
     - 20+ developer tools
     - System-level cleanup (logs, caches, thumbnails, etc.)
+    - Dry-run and scan-only modes
+    - Configuration file support
+    - Detailed logging with rotation
+    - Scheduled cleanup support
+    - Export/import settings
+    - Interactive mode with progress bars
 .VERSION
-    3.0.0
+    4.0.0
 #>
 
 #Requires -PSEdition Core
@@ -26,63 +32,77 @@ param(
     [switch]$System,
     [switch]$Quiet,
     [switch]$Verbose,
-    [switch]$Help
+    [switch]$Help,
+    [switch]$DryRun,
+    [switch]$ScanOnly,
+    [string]$ConfigFile,
+    [switch]$ExportConfig,
+    [switch]$ImportConfig,
+    [switch]$Interactive,
+    [switch]$Schedule,
+    [string]$LogFile
 )
 
-# Show help
-if ($Help) {
-    Write-Host @"
-Universal Disk Cleanup Tool v3.0
-===============================
-
-USAGE:
-    cleanup.ps1 [OPTIONS]
-
-OPTIONS:
-    --All       Clean everything (recommended)
-    --Temp      Clean temporary files
-    --Browser   Clean browser caches
-    --Dev       Clean developer tool caches
-    --Logs      Clean system logs
-    --Cache     Clean package manager caches
-    --Apps      Clean application caches
-    --System    Clean system files (thumbnails, fonts, etc.)
-    --Quiet     Suppress output
-    --Verbose   Show detailed output
-    --Help      Show this help message
-
-EXAMPLES:
-    ./cleanup.ps1 --All              # Clean everything
-    ./cleanup.ps1 --Temp --Browser    # Quick cleanup
-    ./cleanup.ps1 --Dev --Cache       # Clean development tools
-    ./cleanup.ps1 --All --Verbose     # Full cleanup with details
-
-PLATFORM SUPPORT:
-    - Windows 10/11
-    - macOS 10.14+
-    - Linux (Ubuntu, Fedora, Arch, Debian, etc.)
-
-For more info: https://github.com/chibuenyim/UniversalDiskCleanupTool
-"@
-    exit 0
+# =============================================
+# CONFIGURATION
+# =============================================
+$script:Config = @{
+    Version = "4.0.0"
+    LastRun = $null
+    TotalCleaned = 0
+    ScanResults = @{}
+    LogFile = if ($LogFile) { $LogFile } else { "$env:HOME/.diskcleanup/cleanup.log" }
+    MaxLogSize = 10MB
+    ConfigPath = if ($ConfigFile) { $ConfigFile } else { "$env:HOME/.diskcleanup/config.json" }
 }
 
-# Detect OS
-$OS = $null
-if ($IsWindows) {
-    $OS = "Windows"
-} elseif ($IsMacOS) {
-    $OS = "macOS"
-} elseif ($IsLinux) {
-    $OS = "Linux"
-} else {
-    Write-Error "Unsupported operating system"
-    exit 1
+# Create config directory
+$configDir = Split-Path $script:Config.ConfigPath -Parent
+if (-not (Test-Path $configDir)) {
+    New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 }
 
-# Color support
+$logDir = Split-Path $script:Config.LogFile -Parent
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+
+# =============================================
+# LOGGING
+# =============================================
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "[$timestamp] [$Level] $Message"
+
+    # Log rotation
+    if (Test-Path $script:Config.LogFile) {
+        $logSize = (Get-Item $script:Config.LogFile).Length
+        if ($logSize -gt $script:Config.MaxLogSize) {
+            $archivePath = "$($script:Config.LogFile).old"
+            Move-Item -Path $script:Config.LogFile -Destination $archivePath -Force
+            if (Test-Path "$archivePath.1") { Remove-Item "$archivePath.1" -Force }
+            Move-Item -Path $archivePath -Destination "$archivePath.1" -Force
+        }
+    }
+
+    Add-Content -Path $script:Config.LogFile -Value $logMessage -ErrorAction SilentlyContinue
+}
+
 function Write-ColorOutput {
-    param([string]$Message, [string]$Color = "White")
+    param(
+        [string]$Message,
+        [string]$Color = "White"
+    )
+
+    Write-Log -Message $Message -Level "INFO"
+
+    if ($Quiet) { return }
+
     if ($Host.UI.RawUI.ForegroundColor) {
         Write-Host $Message -ForegroundColor $Color
     } else {
@@ -90,11 +110,265 @@ function Write-ColorOutput {
     }
 }
 
-function Write-Success { Write-ColorOutput @args -Color "Green" }
-function Write-Warning { Write-ColorOutput @args -Color "Yellow" }
-function Write-Error-Msg { Write-ColorOutput @args -Color "Red" }
-function Write-Info { Write-ColorOutput @args -Color "Cyan" }
+function Write-Success {
+    Write-ColorOutput @args -Color "Green"
+    Write-Log -Message ($args -join " ") -Level "SUCCESS"
+}
 
+function Write-WarningOutput {
+    Write-ColorOutput @args -Color "Yellow"
+    Write-Log -Message ($args -join " ") -Level "WARNING"
+}
+
+function Write-Error-Msg {
+    Write-ColorOutput @args -Color "Red"
+    Write-Log -Message ($args -join " ") -Level "ERROR"
+}
+
+function Write-Info {
+    Write-ColorOutput @args -Color "Cyan"
+}
+
+# =============================================
+# CONFIG MANAGEMENT
+# =============================================
+function Save-Config {
+    $configData = @{
+        Version = $script:Config.Version
+        LastRun = (Get-Date).ToString("o")
+        TotalCleaned = $script:Config.TotalCleaned
+        Options = @{
+            All = $All
+            Temp = $Temp
+            Browser = $Browser
+            Dev = $Dev
+            Logs = $Logs
+            Cache = $Cache
+            Apps = $Apps
+            System = $System
+        }
+    }
+
+    $json = $configData | ConvertTo-Json -Depth 10
+    $json | Out-File -FilePath $script:Config.ConfigPath -Encoding UTF8
+    Write-Success "Configuration saved to: $($script:Config.ConfigPath)"
+}
+
+function Load-Config {
+    if (Test-Path $script:Config.ConfigPath) {
+        $json = Get-Content $script:Config.ConfigPath -Raw | ConvertFrom-Json
+
+        if ($json.LastRun) {
+            $script:Config.LastRun = [DateTime]::Parse($json.LastRun)
+            Write-Info "Last run: $($script:Config.LastRun)"
+        }
+
+        if ($json.TotalCleaned) {
+            $script:Config.TotalCleaned = $json.TotalCleaned
+            Write-Info "Previously cleaned: $(Format-Bytes $script:Config.TotalCleaned)"
+        }
+
+        if ($json.Options) {
+            Write-Info "Loaded configuration with saved options"
+            return $json.Options
+        }
+    } else {
+        Write-WarningOutput "No configuration file found at: $($script:Config.ConfigPath)"
+    }
+    return $null
+}
+
+function Export-Configuration {
+    $configData = @{
+        Version = $script:Config.Version
+        Created = (Get-Date).ToString("o")
+        Options = @{
+            All = $All
+            Temp = $Temp
+            Browser = $Browser
+            Dev = $Dev
+            Logs = $Logs
+            Cache = $Cache
+            Apps = $Apps
+            System = $System
+            Verbose = $Verbose
+            Interactive = $Interactive
+        }
+    }
+
+    $exportPath = "$env:HOME/.diskcleanup/config-export-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
+    $configData | ConvertTo-Json -Depth 10 | Out-File -FilePath $exportPath -Encoding UTF8
+    Write-Success "Configuration exported to: $exportPath"
+}
+
+function Import-Configuration {
+    $imports = Get-ChildItem -Path "$env:HOME/.diskcleanup" -Filter "config-export-*.json" |
+               Sort-Object LastWriteTime -Descending |
+               Select-Object -First 1
+
+    if ($imports) {
+        $configData = Get-Content $imports.FullName -Raw | ConvertFrom-Json
+        Write-Info "Imported configuration from: $($imports.Name)"
+        Write-Info "Created: $($configData.Created)"
+        return $configData.Options
+    } else {
+        Write-WarningOutput "No exported configuration found"
+        return $null
+    }
+}
+
+# =============================================
+# SCHEDULING
+# =============================================
+function Register-ScheduledCleanup {
+    $OS = Get-OS
+
+    if ($OS -eq "Windows") {
+        Write-Info "Registering Windows Task Scheduler job..."
+
+        $scriptPath = $PSCommandPath
+        $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-File `"$scriptPath`" --All"
+        $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 2am
+        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+
+        Register-ScheduledTask -TaskName "DiskCleanupTool" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force
+        Write-Success "Scheduled task registered: DiskCleanupTool (Weekly Sundays at 2 AM)"
+
+    } elseif ($OS -eq "macOS" -or $OS -eq "Linux") {
+        Write-Info "Registering cron job..."
+
+        $scriptPath = $PSCommandPath
+        $cronEntry = "0 2 * * 0 pwsh -File `"$scriptPath`" --All --Quiet >> `$HOME/.diskcleanup/scheduled.log 2>&1"
+
+        # Install cron job
+        $cronJob = (crontab -l 2>/dev/null) -notmatch "DiskCleanupTool"
+        $cronJob += $cronEntry
+        $cronJob | crontab -
+
+        Write-Success "Cron job registered: Weekly Sundays at 2 AM"
+    }
+}
+
+# =============================================
+# PROGRESS BAR
+# =============================================
+function Show-Progress {
+    param(
+        [string]$Activity,
+        [int]$PercentComplete
+    )
+
+    if ($Interactive -and -not $Quiet) {
+        Write-Progress -Activity $Activity -PercentComplete $PercentComplete
+    }
+}
+
+# =============================================
+# HELP
+# =============================================
+function Show-Help {
+    Write-Host @"
+Universal Disk Cleanup Tool v4.0
+================================
+
+USAGE:
+    cleanup.ps1 [OPTIONS]
+
+BASIC OPTIONS:
+    --All         Clean everything (recommended)
+    --Temp        Clean temporary files
+    --Browser     Clean browser caches
+    --Dev         Clean developer tool caches
+    --Logs        Clean system logs
+    --Cache       Clean package manager caches
+    --Apps        Clean application caches
+    --System      Clean system files (thumbnails, fonts, etc.)
+
+ADVANCED OPTIONS:
+    --DryRun      Preview cleanup without making changes
+    --ScanOnly    Scan and show what would be cleaned
+    --Interactive Show progress bars and prompts
+    --Quiet       Suppress output
+    --Verbose     Show detailed output
+    --Help        Show this help message
+
+CONFIGURATION:
+    --ConfigFile  Path to configuration file
+    --ExportConfig Export current settings to file
+    --ImportConfig Import settings from file
+    --Schedule    Set up automatic weekly cleanup
+
+EXAMPLES:
+    ./cleanup.ps1 --All                    # Clean everything
+    ./cleanup.ps1 --DryRun --All           # Preview what would be cleaned
+    ./cleanup.ps1 --ScanOnly --Dev         # Scan dev tools only
+    ./cleanup.ps1 --All --Verbose          # Full cleanup with details
+    ./cleanup.ps1 --All --Interactive      # With progress bars
+    ./cleanup.ps1 --ExportConfig           # Save current settings
+    ./cleanup.ps1 --ImportConfig --All     # Import and run
+    ./cleanup.ps1 --Schedule               # Set up weekly cleanup
+
+PLATFORM SUPPORT:
+    - Windows 10/11
+    - macOS 10.14+
+    - Linux (Ubuntu, Fedora, Arch, Debian, etc.)
+
+CONFIGURATION FILES:
+    Config:  ~/.diskcleanup/config.json
+    Logs:    ~/.diskcleanup/cleanup.log
+    Exports: ~/.diskcleanup/config-export-*.json
+
+For more info: https://github.com/chibuenyim/UniversalDiskCleanupTool
+"@
+    exit 0
+}
+
+if ($Help) { Show-Help }
+
+# =============================================
+# OS DETECTION
+# =============================================
+function Get-OS {
+    if ($IsWindows) { return "Windows" }
+    elseif ($IsMacOS) { return "macOS" }
+    elseif ($IsLinux) { return "Linux" }
+    else { return "Unknown" }
+}
+
+$OS = Get-OS
+
+# Handle export/import
+if ($ExportConfig) {
+    Export-Configuration
+    exit 0
+}
+
+if ($ImportConfig) {
+    $options = Import-Configuration
+    if ($options) {
+        $All = $options.All
+        $Temp = $options.Temp
+        $Browser = $options.Browser
+        $Dev = $options.Dev
+        $Logs = $options.Logs
+        $Cache = $options.Cache
+        $Apps = $options.Apps
+        $System = $options.System
+        if ($options.Verbose) { $Verbose = $true }
+        if ($options.Interactive) { $Interactive = $true }
+    }
+    exit 0
+}
+
+if ($Schedule) {
+    Register-ScheduledCleanup
+    exit 0
+}
+
+# =============================================
+# UTILITY FUNCTIONS
+# =============================================
 function Get-FolderSize {
     param([string]$Path)
     if (Test-Path $Path) {
@@ -117,26 +391,50 @@ function Format-Bytes {
     return "$Bytes Bytes"
 }
 
-function Remove-Safe {
-    param([string]$Path, [string]$Sudo = $false)
+function Remove-FolderSafe {
+    param(
+        [string]$Path,
+        [string]$Description = $Path,
+        [bool]$Sudo = $false
+    )
+
     if (-not (Test-Path $Path)) { return 0 }
 
     try {
         $before = Get-FolderSize $Path
+
+        if ($ScanOnly) {
+            $script:Config.ScanResults[$Description] = $before
+            Write-Info "  Would clean: $Description - $(Format-Bytes $before)"
+            return 0
+        }
+
+        if ($DryRun) {
+            Write-Info "  [DRY RUN] Would clean: $Description - $(Format-Bytes $before)"
+            return 0
+        }
+
         if ($Sudo -and $OS -ne "Windows") {
             sudo rm -rf "$Path/*" 2>$null
         } else {
             Remove-Item -Path "$Path/*" -Recurse -Force -ErrorAction SilentlyContinue
         }
+
         $after = Get-FolderSize $Path
-        return ($before - $after)
+        $freed = $before - $after
+
+        if ($Verbose -or $freed -gt 0) {
+            Write-Success "  Cleaned $Description - Freed $(Format-Bytes $freed)"
+        }
+
+        return $freed
     } catch {
+        Write-Error-Msg "  Error cleaning $Description"
         return 0
     }
 }
 
 $totalFreed = 0
-$VerboseMode = $Verbose
 
 # =============================================
 # WINDOWS CLEANERS
@@ -144,8 +442,12 @@ $VerboseMode = $Verbose
 function Invoke-WindowsCleanup {
     Write-Info "=== Windows Disk Cleanup ==="
 
+    $progress = 0
+    $maxProgress = 7
+
     # Temp files
     if ($All -or $Temp) {
+        Show-Progress -Activity "Cleaning temp files" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning Windows temp files..." -ForegroundColor Cyan
         $tempPaths = @(
             "$env:LOCALAPPDATA\Temp",
@@ -155,16 +457,14 @@ function Invoke-WindowsCleanup {
         )
 
         foreach ($path in $tempPaths) {
-            $freed = Remove-Safe $path
+            $freed = Remove-FolderSafe -Path $path -Description $path
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) {
-                Write-Success "  Cleaned $path - Freed $(Format-Bytes $freed)"
-            }
         }
     }
 
     # Browser caches
     if ($All -or $Browser) {
+        Show-Progress -Activity "Cleaning browser caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning browser caches..." -ForegroundColor Cyan
         $browsers = @{
             "Chrome" = @("$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cache",
@@ -180,11 +480,8 @@ function Invoke-WindowsCleanup {
         foreach ($browser in $browsers.Keys) {
             foreach ($path in $browsers[$browser]) {
                 if (Test-Path $path) {
-                    $freed = Remove-Safe $path
+                    $freed = Remove-FolderSafe -Path $path -Description "$browser cache"
                     $totalFreed += $freed
-                    if ($freed -gt 0 -or $VerboseMode) {
-                        Write-Success "  Cleaned $browser - Freed $(Format-Bytes $freed)"
-                    }
                 }
             }
         }
@@ -192,6 +489,7 @@ function Invoke-WindowsCleanup {
 
     # Developer caches
     if ($All -or $Dev) {
+        Show-Progress -Activity "Cleaning developer caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning developer caches..." -ForegroundColor Cyan
 
         # Package managers
@@ -221,17 +519,16 @@ function Invoke-WindowsCleanup {
                     $after = Get-FolderSize $path
                     $freed = $before - $after
                     $totalFreed += $freed
-                    if ($VerboseMode) { Write-Success "  Cleaned $tool - Freed $(Format-Bytes $freed)" }
+                    if ($Verbose) { Write-Success "  Cleaned $tool - Freed $(Format-Bytes $freed)" }
                 } catch {}
             } elseif ($tool -eq "pip" -and (Get-Command pip -ErrorAction SilentlyContinue)) {
                 try {
                     pip cache purge *> $null
-                    if ($VerboseMode) { Write-Success "  Cleaned $tool cache" }
+                    if ($Verbose) { Write-Success "  Cleaned $tool cache" }
                 } catch {}
             } else {
-                $freed = Remove-Safe $path
+                $freed = Remove-FolderSafe -Path $path -Description $tool
                 $totalFreed += $freed
-                if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $tool - Freed $(Format-Bytes $freed)" }
             }
         }
 
@@ -244,9 +541,8 @@ function Invoke-WindowsCleanup {
         )
 
         foreach ($path in $devTools) {
-            $freed = Remove-Safe $path
+            $freed = Remove-FolderSafe -Path $path -Description "Dev tools"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned dev tools - Freed $(Format-Bytes $freed)" }
         }
 
         # Docker
@@ -261,6 +557,7 @@ function Invoke-WindowsCleanup {
 
     # Application caches
     if ($All -or $Apps) {
+        Show-Progress -Activity "Cleaning application caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning application caches..." -ForegroundColor Cyan
         $appPaths = @{
             "AdobeCC" = "$env:APPDATA\Adobe\Cache"
@@ -276,14 +573,14 @@ function Invoke-WindowsCleanup {
 
         foreach ($app in $appPaths.Keys) {
             $path = $appPaths[$app]
-            $freed = Remove-Safe $path
+            $freed = Remove-FolderSafe -Path $path -Description $app
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $app - Freed $(Format-Bytes $freed)" }
         }
     }
 
     # System files
     if ($All -or $System) {
+        Show-Progress -Activity "Cleaning system files" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning system files..." -ForegroundColor Cyan
         $sysPaths = @(
             "C:\ProgramData\Microsoft\Windows\WER",
@@ -293,9 +590,8 @@ function Invoke-WindowsCleanup {
         )
 
         foreach ($path in $sysPaths) {
-            $freed = Remove-Safe $path
+            $freed = Remove-FolderSafe -Path $path -Description "System files"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned system files - Freed $(Format-Bytes $freed)" }
         }
 
         # Thumbnail cache
@@ -304,7 +600,9 @@ function Invoke-WindowsCleanup {
             Get-ChildItem -Path $thumbPath -Filter "thumbcache*.db" -ErrorAction SilentlyContinue | ForEach-Object {
                 try {
                     $totalFreed += $_.Length
-                    Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+                    if (-not $DryRun -and -not $ScanOnly) {
+                        Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+                    }
                 } catch {}
             }
         }
@@ -315,7 +613,9 @@ function Invoke-WindowsCleanup {
             $recycleBin = $shell.Namespace(0xA)
             $items = $recycleBin.Items()
             if ($items.Count -gt 0) {
-                Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+                if (-not $DryRun -and -not $ScanOnly) {
+                    Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+                }
                 Write-Success "  Emptied Recycle Bin ($($items.Count) items)"
             }
         } catch {}
@@ -323,19 +623,21 @@ function Invoke-WindowsCleanup {
 
     # Windows Update
     if ($All -or $Cache) {
+        Show-Progress -Activity "Cleaning Windows Update" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning Windows Update residues..." -ForegroundColor Cyan
         try {
             Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
             $wuPath = "C:\Windows\SoftwareDistribution\Download"
-            $freed = Remove-Safe $wuPath
+            $freed = Remove-FolderSafe -Path $wuPath -Description "Windows Update"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Windows Update - Freed $(Format-Bytes $freed)" }
             Start-Service -Name wuauserv -ErrorAction SilentlyContinue
 
             Write-Info "  Running DISM cleanup (may take 10-30 minutes)..."
-            dism /Online /Cleanup-Image /StartComponentCleanup *> $null
+            if (-not $DryRun -and -not $ScanOnly) {
+                dism /Online /Cleanup-Image /StartComponentCleanup *> $null
+            }
         } catch {
-            Write-Warning "  Could not clean Windows Update (requires Admin)"
+            Write-WarningOutput "  Could not clean Windows Update (requires Admin)"
         }
     }
 }
@@ -346,8 +648,12 @@ function Invoke-WindowsCleanup {
 function Invoke-MacOSCleanup {
     Write-Info "=== macOS Disk Cleanup ==="
 
+    $progress = 0
+    $maxProgress = 6
+
     # Temp files
     if ($All -or $Temp) {
+        Show-Progress -Activity "Cleaning temp files" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning temp files..." -ForegroundColor Cyan
         $tempPaths = @(
             "/tmp",
@@ -358,14 +664,14 @@ function Invoke-MacOSCleanup {
         )
 
         foreach ($path in $tempPaths) {
-            $freed = Remove-Safe $path $true
+            $freed = Remove-FolderSafe -Path $path -Description $path -Sudo $true
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $path - Freed $(Format-Bytes $freed)" }
         }
     }
 
     # Browser caches (Enhanced)
     if ($All -or $Browser) {
+        Show-Progress -Activity "Cleaning browser caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning browser caches..." -ForegroundColor Cyan
         $browsers = @{
             "Safari" = @("$env:HOME/Library/Caches/com.apple.Safari",
@@ -382,9 +688,8 @@ function Invoke-MacOSCleanup {
         foreach ($browser in $browsers.Keys) {
             foreach ($path in $browsers[$browser]) {
                 if (Test-Path $path) {
-                    $freed = Remove-Safe $path
+                    $freed = Remove-FolderSafe -Path $path -Description "$browser cache"
                     $totalFreed += $freed
-                    if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $browser - Freed $(Format-Bytes $freed)" }
                 }
             }
         }
@@ -392,38 +697,47 @@ function Invoke-MacOSCleanup {
 
     # Developer caches (Enhanced)
     if ($All -or $Dev) {
+        Show-Progress -Activity "Cleaning developer caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning developer caches..." -ForegroundColor Cyan
 
         # Package managers
         if (Get-Command npm -ErrorAction SilentlyContinue) {
             try {
                 $before = Get-FolderSize "$env:HOME/.npm"
-                npm cache clean --force *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    npm cache clean --force *> $null
+                }
                 $after = Get-FolderSize "$env:HOME/.npm"
                 $freed = $before - $after
                 $totalFreed += $freed
-                if ($VerboseMode) { Write-Success "  Cleaned npm - Freed $(Format-Bytes $freed)" }
+                if ($Verbose) { Write-Success "  Cleaned npm - Freed $(Format-Bytes $freed)" }
             } catch {}
         }
 
         if (Get-Command yarn -ErrorAction SilentlyContinue) {
             try {
-                yarn cache clean *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned yarn cache" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    yarn cache clean *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned yarn cache" }
             } catch {}
         }
 
         if (Get-Command pip3 -ErrorAction SilentlyContinue) {
             try {
-                pip3 cache purge *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned pip cache" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    pip3 cache purge *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned pip cache" }
             } catch {}
         }
 
         if (Get-Command poetry -ErrorAction SilentlyContinue) {
             try {
-                poetry cache clear --all -q *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned Poetry cache" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    poetry cache clear --all -q *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned Poetry cache" }
             } catch {}
         }
 
@@ -431,7 +745,9 @@ function Invoke-MacOSCleanup {
         if (Get-Command brew -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning Homebrew..."
-                brew cleanup -s --prune=all *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    brew cleanup -s --prune=all *> $null
+                }
                 Write-Success "  Cleaned Homebrew cache"
             } catch {}
         }
@@ -439,48 +755,45 @@ function Invoke-MacOSCleanup {
         # CocoaPods
         $cocoaPath = "$env:HOME/Library/Caches/CocoaPods"
         if (Test-Path $cocoaPath) {
-            $freed = Remove-Safe $cocoaPath
+            $freed = Remove-FolderSafe -Path $cocoaPath -Description "CocoaPods"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned CocoaPods - Freed $(Format-Bytes $freed)" }
         }
 
         # Carthage
         $carthagePath = "$env:HOME/Library/Caches/org.carthage.CarthageKit"
         if (Test-Path $carthagePath) {
-            $freed = Remove-Safe $carthagePath
+            $freed = Remove-FolderSafe -Path $carthagePath -Description "Carthage"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Carthage - Freed $(Format-Bytes $freed)" }
         }
 
         # Swift Package Manager
         $swiftPath = "$env:HOME/Library/Developer/Xcode/DerivedData"
         if (Test-Path $swiftPath) {
-            $freed = Remove-Safe $swiftPath $true
+            $freed = Remove-FolderSafe -Path $swiftPath -Description "Xcode DerivedData" -Sudo $true
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Xcode DerivedData - Freed $(Format-Bytes $freed)" }
         }
 
         # Go modules
         $goPath = "$env:HOME/go/pkg/mod"
         if (Test-Path $goPath) {
-            $freed = Remove-Safe $goPath
+            $freed = Remove-FolderSafe -Path $goPath -Description "Go modules"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Go modules - Freed $(Format-Bytes $freed)" }
         }
 
         # Cargo
         $cargoPath = "$env:HOME/.cargo/registry"
         if (Test-Path $cargoPath) {
-            $freed = Remove-Safe $cargoPath
+            $freed = Remove-FolderSafe -Path $cargoPath -Description "Cargo"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Cargo - Freed $(Format-Bytes $freed)" }
         }
 
         # Docker
         if (Get-Command docker -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning Docker..."
-                docker system prune -af --volumes *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    docker system prune -af --volumes *> $null
+                }
                 Write-Success "  Cleaned Docker system"
             } catch {}
         }
@@ -488,22 +801,21 @@ function Invoke-MacOSCleanup {
         # Gradle
         $gradlePath = "$env:HOME/.gradle/caches"
         if (Test-Path $gradlePath) {
-            $freed = Remove-Safe $gradlePath
+            $freed = Remove-FolderSafe -Path $gradlePath -Description "Gradle"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Gradle - Freed $(Format-Bytes $freed)" }
         }
 
         # Maven
         $mavenPath = "$env:HOME/.m2/repository"
         if (Test-Path $mavenPath) {
-            $freed = Remove-Safe $mavenPath
+            $freed = Remove-FolderSafe -Path $mavenPath -Description "Maven"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Maven - Freed $(Format-Bytes $freed)" }
         }
     }
 
     # Application caches (Enhanced)
     if ($All -or $Apps) {
+        Show-Progress -Activity "Cleaning application caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning application caches..." -ForegroundColor Cyan
         $appPaths = @{
             "AdobeCC" = "$env:HOME/Library/Application Support/Adobe"
@@ -520,15 +832,15 @@ function Invoke-MacOSCleanup {
         foreach ($app in $appPaths.Keys) {
             $path = $appPaths[$app]
             if (Test-Path $path) {
-                $freed = Remove-Safe $path
+                $freed = Remove-FolderSafe -Path $path -Description $app
                 $totalFreed += $freed
-                if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $app - Freed $(Format-Bytes $freed)" }
             }
         }
     }
 
     # System files (Enhanced)
     if ($All -or $System) {
+        Show-Progress -Activity "Cleaning system files" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning system files..." -ForegroundColor Cyan
 
         # System logs
@@ -540,46 +852,47 @@ function Invoke-MacOSCleanup {
         )
 
         foreach ($path in $logPaths) {
-            $freed = Remove-Safe $path $true
+            $freed = Remove-FolderSafe -Path $path -Description "Logs" -Sudo $true
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned logs - Freed $(Format-Bytes $freed)" }
         }
 
         # Font cache
         try {
-            sudo rm -rf /Library/Caches/*/cached.ttf 2>$null
-            sudo rm -rf "$env:HOME/Library/Caches/com.apple.ATS/*/fontRegistry" 2>$null
-            if ($VerboseMode) { Write-Success "  Cleaned font cache" }
+            if (-not $DryRun -and -not $ScanOnly) {
+                sudo rm -rf /Library/Caches/*/cached.ttf 2>$null
+                sudo rm -rf "$env:HOME/Library/Caches/com.apple.ATS/*/fontRegistry" 2>$null
+            }
+            if ($Verbose) { Write-Success "  Cleaned font cache" }
         } catch {}
 
         # Thumbnail cache
         $thumbPath = "$env:HOME/Library/Caches/com.apple.ichat"
         if (Test-Path $thumbPath) {
-            $freed = Remove-Safe $thumbPath
+            $freed = Remove-FolderSafe -Path $thumbPath -Description "Thumbnails"
             $totalFreed += $freed
-            if ($VerboseMode) { Write-Success "  Cleaned thumbnails - Freed $(Format-Bytes $freed)" }
         }
 
         # iOS device backups
         $backupPath = "$env:HOME/Library/Application Support/MobileSync/Backup"
         if (Test-Path $backupPath) {
-            Write-Warning "  iOS backups found at: $backupPath"
-            Write-Warning "  Review and delete old backups manually if needed"
+            Write-WarningOutput "  iOS backups found at: $backupPath"
+            Write-WarningOutput "  Review and delete old backups manually if needed"
         }
 
         # Time Machine snapshots (requires user interaction)
         try {
             $snapshots = tmutil listlocalsnapshots / 2>$null
             if ($snapshots) {
-                Write-Warning "  Time Machine snapshots found:"
-                Write-Warning $snapshots
-                Write-Warning "  Run 'sudo tmutil deletelocalsnapshots' to clean"
+                Write-WarningOutput "  Time Machine snapshots found:"
+                Write-WarningOutput $snapshots
+                Write-WarningOutput "  Run 'sudo tmutil deletelocalsnapshots' to clean"
             }
         } catch {}
     }
 
     # Package manager caches
     if ($All -or $Cache) {
+        Show-Progress -Activity "Cleaning package caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning package manager caches..." -ForegroundColor Cyan
 
         # Homebrew already handled in Dev section
@@ -587,8 +900,10 @@ function Invoke-MacOSCleanup {
         # MacPorts
         if (Get-Command port -ErrorAction SilentlyContinue) {
             try {
-                sudo port clean --all installed *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned MacPorts" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo port clean --all installed *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned MacPorts" }
             } catch {}
         }
     }
@@ -600,18 +915,24 @@ function Invoke-MacOSCleanup {
 function Invoke-LinuxCleanup {
     Write-Info "=== Linux Disk Cleanup ==="
 
+    $progress = 0
+    $maxProgress = 8
+
     # Package manager caches (Enhanced)
     if ($All -or $Cache) {
+        Show-Progress -Activity "Cleaning package caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning package manager caches..." -ForegroundColor Cyan
 
         # apt/debian/ubuntu
         if (Get-Command apt-get -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning apt..."
-                sudo apt-get clean *> $null
-                sudo apt-get autoclean *> $null
-                sudo apt-get autoremove -y *> $null
-                sudo rm -rf /var/cache/apt/archives/*.deb 2>$null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo apt-get clean *> $null
+                    sudo apt-get autoclean *> $null
+                    sudo apt-get autoremove -y *> $null
+                    sudo rm -rf /var/cache/apt/archives/*.deb 2>$null
+                }
                 Write-Success "  Cleaned apt cache"
             } catch {}
         }
@@ -620,8 +941,10 @@ function Invoke-LinuxCleanup {
         if (Get-Command dnf -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning dnf..."
-                sudo dnf clean all *> $null
-                sudo dnf autoremove -y *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo dnf clean all *> $null
+                    sudo dnf autoremove -y *> $null
+                }
                 Write-Success "  Cleaned dnf cache"
             } catch {}
         }
@@ -630,8 +953,10 @@ function Invoke-LinuxCleanup {
         if (Get-Command pacman -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning pacman..."
-                sudo pacman -Sc --noconfirm *> $null
-                sudo pacman -Scc --noconfirm *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo pacman -Sc --noconfirm *> $null
+                    sudo pacman -Scc --noconfirm *> $null
+                }
                 Write-Success "  Cleaned pacman cache"
             } catch {}
         }
@@ -640,8 +965,10 @@ function Invoke-LinuxCleanup {
         if (Get-Command yum -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning yum..."
-                sudo yum clean all *> $null
-                sudo yum autoremove -y *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo yum clean all *> $null
+                    sudo yum autoremove -y *> $null
+                }
                 Write-Success "  Cleaned yum cache"
             } catch {}
         }
@@ -650,16 +977,20 @@ function Invoke-LinuxCleanup {
         if (Get-Command zypper -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning zypper..."
-                sudo zypper clean --all *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo zypper clean --all *> $null
+                }
                 Write-Success "  Cleaned zypper cache"
             } catch {}
         }
 
-        # swpclr/clear linux
+        # swupd/clear linux
         if (Get-Command swupd -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning swupd..."
-                sudo swupd cleanup --all *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo swupd cleanup --all *> $null
+                }
                 Write-Success "  Cleaned swupd cache"
             } catch {}
         }
@@ -668,7 +999,9 @@ function Invoke-LinuxCleanup {
         if (Get-Command xbps-remove -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning xbps..."
-                sudo xbps-remove -O *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo xbps-remove -O *> $null
+                }
                 Write-Success "  Cleaned xbps cache"
             } catch {}
         }
@@ -677,7 +1010,9 @@ function Invoke-LinuxCleanup {
         if (Get-Command apk -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning apk..."
-                sudo apk cache clean *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo apk cache clean *> $null
+                }
                 Write-Success "  Cleaned apk cache"
             } catch {}
         }
@@ -686,9 +1021,11 @@ function Invoke-LinuxCleanup {
         if (Get-Command snap -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning old snap revisions..."
-                sudo snap set system refresh.retain=2
-                sudo snap run --shell `sh -c 'set -eu; rm -f /var/lib/snapd/snaps/*_* && snap run --shell /bin/sh'` 2>$null
-                if ($VerboseMode) { Write-Success "  Cleaned old snap revisions" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo snap set system refresh.retain=2
+                    sudo snap run --shell `sh -c 'set -eu; rm -f /var/lib/snapd/snaps/*_* && snap run --shell /bin/sh'` 2>$null
+                }
+                if ($Verbose) { Write-Success "  Cleaned old snap revisions" }
             } catch {}
         }
 
@@ -696,26 +1033,29 @@ function Invoke-LinuxCleanup {
         if (Get-Command flatpak -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning flatpak..."
-                flatpak uninstall --unused -y *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned unused flatpak runtimes" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    flatpak uninstall --unused -y *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned unused flatpak runtimes" }
             } catch {}
         }
     }
 
     # Temp files
     if ($All -or $Temp) {
+        Show-Progress -Activity "Cleaning temp files" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning temp files..." -ForegroundColor Cyan
         $tempPaths = @("/tmp", "/var/tmp", "$env:HOME/.cache", "$env:HOME/.thumbnails")
 
         foreach ($path in $tempPaths) {
-            $freed = Remove-Safe $path $true
+            $freed = Remove-FolderSafe -Path $path -Description $path -Sudo $true
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $path - Freed $(Format-Bytes $freed)" }
         }
     }
 
     # Browser caches (Enhanced)
     if ($All -or $Browser) {
+        Show-Progress -Activity "Cleaning browser caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning browser caches..." -ForegroundColor Cyan
         $browsers = @{
             "Chrome" = @("$env:HOME/.cache/google-chrome", "$env:HOME/.config/google-chrome/Default/Cache")
@@ -730,9 +1070,8 @@ function Invoke-LinuxCleanup {
         foreach ($browser in $browsers.Keys) {
             foreach ($path in $browsers[$browser]) {
                 if (Test-Path $path) {
-                    $freed = Remove-Safe $path
+                    $freed = Remove-FolderSafe -Path $path -Description "$browser cache"
                     $totalFreed += $freed
-                    if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $browser - Freed $(Format-Bytes $freed)" }
                 }
             }
         }
@@ -740,17 +1079,20 @@ function Invoke-LinuxCleanup {
 
     # Developer caches (Enhanced)
     if ($All -or $Dev) {
+        Show-Progress -Activity "Cleaning developer caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning developer caches..." -ForegroundColor Cyan
 
         # npm
         if (Get-Command npm -ErrorAction SilentlyContinue) {
             try {
                 $before = Get-FolderSize "$env:HOME/.npm"
-                npm cache clean --force *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    npm cache clean --force *> $null
+                }
                 $after = Get-FolderSize "$env:HOME/.npm"
                 $freed = $before - $after
                 $totalFreed += $freed
-                if ($VerboseMode) { Write-Success "  Cleaned npm - Freed $(Format-Bytes $freed)" }
+                if ($Verbose) { Write-Success "  Cleaned npm - Freed $(Format-Bytes $freed)" }
             } catch {}
         }
 
@@ -758,83 +1100,91 @@ function Invoke-LinuxCleanup {
         if (Get-Command yarn -ErrorAction SilentlyContinue) {
             try {
                 $before = Get-FolderSize "$env:HOME/.yarn/cache"
-                yarn cache clean *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    yarn cache clean *> $null
+                }
                 $after = Get-FolderSize "$env:HOME/.yarn/cache"
                 $freed = $before - $after
                 $totalFreed += $freed
-                if ($VerboseMode) { Write-Success "  Cleaned yarn - Freed $(Format-Bytes $freed)" }
+                if ($Verbose) { Write-Success "  Cleaned yarn - Freed $(Format-Bytes $freed)" }
             } catch {}
         }
 
         # pnpm
         if (Get-Command pnpm -ErrorAction SilentlyContinue) {
             try {
-                pnpm store prune *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned pnpm store" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    pnpm store prune *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned pnpm store" }
             } catch {}
         }
 
         # pip
         if (Get-Command pip3 -ErrorAction SilentlyContinue) {
             try {
-                pip3 cache purge *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned pip cache" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    pip3 cache purge *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned pip cache" }
             } catch {}
         }
 
         # Poetry
         if (Get-Command poetry -ErrorAction SilentlyContinue) {
             try {
-                poetry cache clear --all -q *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned Poetry cache" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    poetry cache clear --all -q *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned Poetry cache" }
             } catch {}
         }
 
         # Composer
         if (Get-Command composer -ErrorAction SilentlyContinue) {
             try {
-                composer clear-cache -q *> $null
-                if ($VerboseMode) { Write-Success "  Cleaned Composer cache" }
+                if (-not $DryRun -and -not $ScanOnly) {
+                    composer clear-cache -q *> $null
+                }
+                if ($Verbose) { Write-Success "  Cleaned Composer cache" }
             } catch {}
         }
 
         # Go modules
         $goPath = "$env:HOME/go/pkg/mod"
         if (Test-Path $goPath) {
-            $freed = Remove-Safe $goPath
+            $freed = Remove-FolderSafe -Path $goPath -Description "Go modules"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Go modules - Freed $(Format-Bytes $freed)" }
         }
 
         # Cargo
         $cargoPath = "$env:HOME/.cargo/registry"
         if (Test-Path $cargoPath) {
-            $freed = Remove-Safe $cargoPath
+            $freed = Remove-FolderSafe -Path $cargoPath -Description "Cargo"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Cargo - Freed $(Format-Bytes $freed)" }
         }
 
         # Gradle
         $gradlePath = "$env:HOME/.gradle/caches"
         if (Test-Path $gradlePath) {
-            $freed = Remove-Safe $gradlePath
+            $freed = Remove-FolderSafe -Path $gradlePath -Description "Gradle"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Gradle - Freed $(Format-Bytes $freed)" }
         }
 
         # Maven
         $mavenPath = "$env:HOME/.m2/repository"
         if (Test-Path $mavenPath) {
-            $freed = Remove-Safe $mavenPath
+            $freed = Remove-FolderSafe -Path $mavenPath -Description "Maven"
             $totalFreed += $freed
-            if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned Maven - Freed $(Format-Bytes $freed)" }
         }
 
         # Docker
         if (Get-Command docker -ErrorAction SilentlyContinue) {
             try {
                 Write-Host "  Cleaning Docker..."
-                sudo docker system prune -af --volumes *> $null
+                if (-not $DryRun -and -not $ScanOnly) {
+                    sudo docker system prune -af --volumes *> $null
+                }
                 Write-Success "  Cleaned Docker system"
             } catch {}
         }
@@ -842,6 +1192,7 @@ function Invoke-LinuxCleanup {
 
     # Application caches (Enhanced)
     if ($All -or $Apps) {
+        Show-Progress -Activity "Cleaning application caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning application caches..." -ForegroundColor Cyan
         $appPaths = @{
             "Spotify" = "$env:HOME/.cache/spotify"
@@ -857,63 +1208,68 @@ function Invoke-LinuxCleanup {
         foreach ($app in $appPaths.Keys) {
             $path = $appPaths[$app]
             if (Test-Path $path) {
-                $freed = Remove-Safe $path
+                $freed = Remove-FolderSafe -Path $path -Description $app
                 $totalFreed += $freed
-                if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned $app - Freed $(Format-Bytes $freed)" }
             }
         }
     }
 
     # System files (Enhanced)
     if ($All -or $System) {
+        Show-Progress -Activity "Cleaning system files" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning system files..." -ForegroundColor Cyan
 
         # System logs
         try {
             Write-Host "  Cleaning journal logs..."
             $before = Get-FolderSize "/var/log/journal"
-            sudo journalctl --vacuum-time=7d *> $null
+            if (-not $DryRun -and -not $ScanOnly) {
+                sudo journalctl --vacuum-time=7d *> $null
+            }
             $after = Get-FolderSize "/var/log/journal"
             $freed = $before - $after
             $totalFreed += $freed
-            if ($VerboseMode) { Write-Success "  Cleaned journals - Freed $(Format-Bytes $freed)" }
+            if ($Verbose) { Write-Success "  Cleaned journals - Freed $(Format-Bytes $freed)" }
         } catch {
-            Write-Warning "  Could not clean journals (requires sudo)"
+            Write-WarningOutput "  Could not clean journals (requires sudo)"
         }
 
         # Thumbnail cache
         $thumbPaths = @("$env:HOME/.cache/thumbnails", "$env:HOME/.thumbnails")
         foreach ($path in $thumbPaths) {
             if (Test-Path $path) {
-                $freed = Remove-Safe $path
+                $freed = Remove-FolderSafe -Path $path -Description "Thumbnails"
                 $totalFreed += $freed
-                if ($VerboseMode) { Write-Success "  Cleaned thumbnails - Freed $(Format-Bytes $freed)" }
             }
         }
 
         # Font cache
         try {
-            sudo rm -rf "$env:HOME/.cache/fontconfig" 2>$null
-            if ($VerboseMode) { Write-Success "  Cleaned font cache" }
+            if (-not $DryRun -and -not $ScanOnly) {
+                sudo rm -rf "$env:HOME/.cache/fontconfig" 2>$null
+            }
+            if ($Verbose) { Write-Success "  Cleaned font cache" }
         } catch {}
 
         # Icon cache
         try {
-            sudo rm -rf "$env:HOME/.cache/icons" 2>$null
-            if ($VerboseMode) { Write-Success "  Cleaned icon cache" }
+            if (-not $DryRun -and -not $ScanOnly) {
+                sudo rm -rf "$env:HOME/.cache/icons" 2>$null
+            }
+            if ($Verbose) { Write-Success "  Cleaned icon cache" }
         } catch {}
     }
 
     # Logs
     if ($All -or $Logs) {
+        Show-Progress -Activity "Cleaning system logs" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning system logs..." -ForegroundColor Cyan
         $logPaths = @("/var/log", "$env:HOME/.local/share/xorg", "$env:HOME/.local/share/sddm")
 
         foreach ($path in $logPaths) {
             if (Test-Path $path) {
-                $freed = Remove-Safe $path $true
+                $freed = Remove-FolderSafe -Path $path -Description "Logs" -Sudo $true
                 $totalFreed += $freed
-                if ($freed -gt 0 -or $VerboseMode) { Write-Success "  Cleaned logs - Freed $(Format-Bytes $freed)" }
             }
         }
     }
@@ -925,11 +1281,17 @@ function Invoke-LinuxCleanup {
 if (-not $Quiet) {
     Write-Info ""
     Write-Info "╔════════════════════════════════════════╗"
-    Write-Info "║  Universal Disk Cleanup Tool v3.0     ║"
-    Write-Info "║  Enhanced macOS & Linux Support       ║"
+    Write-Info "║  Universal Disk Cleanup Tool v4.0     ║"
+    Write-Info "║  Advanced Features                    ║"
     Write-Info "╚════════════════════════════════════════╝"
     Write-Info ""
     Write-Host "Detected OS: $OS" -ForegroundColor Cyan
+    Write-Host ""
+
+    # Show mode
+    if ($DryRun) { Write-WarningOutput "MODE: DRY RUN (no changes will be made)" }
+    elseif ($ScanOnly) { Write-WarningOutput "MODE: SCAN ONLY (showing what would be cleaned)" }
+    else { Write-Success "MODE: ACTIVE CLEANUP" }
     Write-Host ""
 
     # Show disk space before
@@ -939,6 +1301,9 @@ if (-not $Quiet) {
     Write-Host ""
 }
 
+# Load configuration
+Load-Config | Out-Null
+
 # Run OS-specific cleanup
 switch ($OS) {
     "Windows" { Invoke-WindowsCleanup }
@@ -946,17 +1311,39 @@ switch ($OS) {
     "Linux"   { Invoke-LinuxCleanup }
 }
 
+# Update config
+$script:Config.TotalCleaned = $totalFreed
+Save-Config
+
 # Show results
 if (-not $Quiet) {
+    if ($Interactive) { Write-Progress -Activity "Cleanup complete" -Completed }
+
     Write-Host ""
     Write-Info "=== RESULTS ==="
-    Write-Success "Total space freed: $(Format-Bytes $totalFreed)"
 
-    $drive = if ($OS -eq "Windows") { Get-PSDrive C } else { Get-PSDrive / }
-    $afterFree = $drive.Free
-    Write-Host "Free space after:  $(Format-Bytes $afterFree)" -ForegroundColor Gray
-    Write-Host "Actual freed:       $(Format-Bytes ($afterFree - $beforeFree))" -ForegroundColor Green
+    if ($ScanOnly -and $script:Config.ScanResults.Count -gt 0) {
+        Write-Success "Scan results:"
+        foreach ($item in $script:Config.ScanResults.GetEnumerator()) {
+            Write-Host "  $($item.Key): $(Format-Bytes $item.Value)" -ForegroundColor Cyan
+        }
+        Write-Host ""
+        $totalScan = ($script:Config.ScanResults.Values | Measure-Object -Sum).Sum
+        Write-Success "Total that could be freed: $(Format-Bytes $totalScan)"
+    } elseif ($DryRun) {
+        Write-Success "Total that would be freed: $(Format-Bytes $totalFreed)"
+        Write-Info "Run without --DryRun to actually clean"
+    } else {
+        Write-Success "Total space freed: $(Format-Bytes $totalFreed)"
+
+        $drive = if ($OS -eq "Windows") { Get-PSDrive C } else { Get-PSDrive / }
+        $afterFree = $drive.Free
+        Write-Host "Free space after:  $(Format-Bytes $afterFree)" -ForegroundColor Gray
+        Write-Host "Actual freed:       $(Format-Bytes ($afterFree - $beforeFree))" -ForegroundColor Green
+    }
 
     Write-Host ""
     Write-Success "Cleanup complete!"
+    Write-Info "Log file: $($script:Config.LogFile)"
+    Write-Info "Config:   $($script:Config.ConfigPath)"
 }

@@ -2,7 +2,7 @@
 
 **A cross-platform disk cleanup utility for Windows, macOS, and Linux**
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)
@@ -57,7 +57,7 @@ Unlike traditional cleanup tools that only scratch the surface, Universal Disk C
 - 🎯 **Selective** - Choose what to clean with command-line options
 - 📦 **Portable** - No installation required (optional install available)
 
-### 🆕 v3.0 Highlights
+### 🆕 v4.0 Highlights
 
 #### 🍎 macOS
 - **7 browsers**: Safari, Chrome, Firefox, Brave, Edge, Opera, Vivaldi
@@ -105,8 +105,8 @@ pwsh -File cleanup.ps1 --all
 **Ubuntu/Debian (.deb package):**
 ```bash
 # Download from releases
-wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/diskcleanup_3.0.0_all.deb
-sudo dpkg -i diskcleanup_3.0.0_all.deb
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v4.0.0/diskcleanup_4.0.0_all.deb
+sudo dpkg -i diskcleanup_4.0.0_all.deb
 sudo apt-get install -f  # Fix dependencies if needed
 
 # Run cleanup
@@ -116,8 +116,8 @@ diskcleanup --all
 **Fedora/RHEL (.rpm package):**
 ```bash
 # Download from releases
-wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/diskcleanup-3.0.0-1.noarch.rpm
-sudo dnf install diskcleanup-3.0.0-1.noarch.rpm
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v4.0.0/diskcleanup-4.0.0-1.noarch.rpm
+sudo dnf install diskcleanup-4.0.0-1.noarch.rpm
 
 # Run cleanup
 diskcleanup --all
@@ -131,9 +131,9 @@ yay -S diskcleanup
 **AppImage (Universal Linux):**
 ```bash
 # Download from releases
-wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/DiskCleanupTool-3.0.0-x86_64.AppImage
-chmod +x DiskCleanupTool-3.0.0-x86_64.AppImage
-./DiskCleanupTool-3.0.0-x86_64.AppImage --all
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v4.0.0/DiskCleanupTool-4.0.0-x86_64.AppImage
+chmod +x DiskCleanupTool-4.0.0-x86_64.AppImage
+./DiskCleanupTool-4.0.0-x86_64.AppImage --all
 ```
 
 **Snap Store:**
@@ -153,7 +153,7 @@ pwsh -File cleanup.ps1 --all
 **Download from Releases:**
 ```powershell
 # Download cleanup.ps1 from releases
-Invoke-WebRequest -Uri "https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/cleanup.ps1" -OutFile "cleanup.ps1"
+Invoke-WebRequest -Uri "https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v4.0.0/cleanup.ps1" -OutFile "cleanup.ps1"
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 .\cleanup.ps1 --all
 ```
@@ -170,10 +170,10 @@ pwsh -File cleanup.ps1 --all
 
 **Automatically built on releases:**
 - **Homebrew** (macOS): `diskcleanup.rb`
-- **.deb** (Ubuntu/Debian): `diskcleanup_3.0.0_all.deb`
-- **.rpm** (Fedora/RHEL): `diskcleanup-3.0.0-1.noarch.rpm`
-- **AppImage** (Universal Linux): `DiskCleanupTool-3.0.0-x86_64.AppImage`
-- **Snap** (Linux distributions): `diskcleanup_3.0.0_amd64.snap`
+- **.deb** (Ubuntu/Debian): `diskcleanup_4.0.0_all.deb`
+- **.rpm** (Fedora/RHEL): `diskcleanup-4.0.0-1.noarch.rpm`
+- **AppImage** (Universal Linux): `DiskCleanupTool-4.0.0-x86_64.AppImage`
+- **Snap** (Linux distributions): `diskcleanup_4.0.0_amd64.snap`
 
 ---
 
@@ -183,10 +183,6 @@ pwsh -File cleanup.ps1 --all
 cleanup [OPTIONS]
 ```
 
-### Options
-
-| Option | Description | Category |
-|--------|-------------|----------|
 | `--All` | Clean everything (recommended) | All |
 | `--Temp` | Clean temporary files only | Basic |
 | `--Browser` | Clean browser caches only | Basic |
@@ -195,11 +191,53 @@ cleanup [OPTIONS]
 | `--Cache` | Clean package caches only | Advanced |
 | `--Apps` | Clean application caches only | Advanced |
 | `--System` | Clean system files only | Advanced |
+| `--DryRun` | Preview cleanup without making changes | Advanced |
+| `--ScanOnly` | Scan and show what would be cleaned | Advanced |
+| `--Interactive` | Show progress bars and real-time feedback | Advanced |
 | `--Quiet` | Suppress output | Modifier |
 | `--Verbose` | Show detailed output | Modifier |
+| `--ConfigFile` | Path to configuration file | Config |
+| `--ExportConfig` | Export current settings to file | Config |
+| `--ImportConfig` | Import settings from file | Config |
+| `--Schedule` | Set up automatic weekly cleanup | Config |
 | `--Help` | Show help message | Info |
 
 ### Examples
+
+```bash
+# Clean everything (recommended)
+cleanup --all
+
+# Preview what would be cleaned (dry run)
+cleanup --dryrun --all
+
+# Scan only - show what could be freed
+cleanup --scanonly --dev
+
+# Quick cleanup - only temp files and browsers
+cleanup --temp --browser
+
+# Interactive cleanup with progress bars
+cleanup --all --interactive
+
+# After development work - clean dev caches
+cleanup --dev --cache
+
+# Full system cleanup with details
+cleanup --all --verbose
+
+# Export settings for later use
+cleanup --exportconfig
+
+# Import and run with saved settings
+cleanup --importconfig --all
+
+# Set up automatic weekly cleanup
+cleanup --schedule
+
+# Clean only package managers
+cleanup --cache
+```
 
 ```bash
 # Clean everything (recommended)
