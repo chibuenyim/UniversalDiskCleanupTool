@@ -14,7 +14,8 @@
 1. Download from: https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
 2. Extract ZIP
 3. **Double-click `START.bat`**
-4. **A beautiful GUI will open** - choose what to clean and click Start!
+4. If PowerShell 7+ is missing, we will install it automatically for you!
+5. A beautiful GUI will open - choose what to clean and click Start!
 
 ### macOS:
 ```bash
@@ -76,7 +77,7 @@ chmod +x start.sh
 - **Fast** - Cleans in minutes, not hours
 - **Powerful** - Frees up to 45 GB of space
 - **Smart** - Knows exactly what to clean
-- **Dependency Check** - Checks for PowerShell 7+ and helps you install it
+- **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing (NEW!)
 
 ---
 
@@ -134,6 +135,7 @@ That's it! The cleanup will start automatically.
 - `START.bat` - Windows GUI launcher
 - `start.sh` - Unix launcher  
 - `launcher.ps1` - GUI launcher for Windows
+- `install-pwsh.ps1` - Automatic PowerShell 7+ installer
 - `cleanup.ps1` - Cross-platform cleanup script
 - `README.md` - This file
 - `README.txt` - Quick reference
@@ -187,7 +189,7 @@ Freed:   30 GB
 ## 🌟 What's New in v5.0
 
 - ✅ **Beautiful GUI** - Windows users now get a graphical interface!
-- ✅ **Dependency checking** - Checks for PowerShell 7+ and helps you install it
+- ✅ **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing!
 - ✅ **Windows Support** - Now works on Windows too!
 - ✅ **Cleaner interface** - Simplified for all platforms
 - ✅ **Faster cleanup** - Optimized performance

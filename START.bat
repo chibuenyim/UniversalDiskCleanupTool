@@ -1,16 +1,17 @@
 @echo off
 REM ============================================
 REM  Universal Disk Cleanup Tool v5.0
-REM  For Windows - GUI Launcher
+REM  For Windows - GUI Launcher with Auto-Install
 REM ============================================
 
 title Universal Disk Cleanup Tool v5.0
 
-REM Check for PowerShell Core
+REM Check for PowerShell Core (pwsh)
 where pwsh >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    REM PowerShell Core not found, run launcher anyway
-    REM The launcher will show a helpful download dialog
+    REM PowerShell Core not found - run installer
+    PowerShell -ExecutionPolicy Bypass -NoProfile -File "%~dp0install-pwsh.ps1"
+    exit /b %ERRORLEVEL%
 )
 
 REM Run GUI launcher
