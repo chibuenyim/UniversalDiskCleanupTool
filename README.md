@@ -84,36 +84,76 @@ Unlike traditional cleanup tools that only scratch the surface, Universal Disk C
 
 ### 🍎 macOS
 
+**Homebrew (Recommended):**
 ```bash
-# Using Homebrew (recommended)
-brew install diskcleanup
+# Install from Homebrew tap
+brew install chibuenyim/tap/diskcleanup
 
-# Or download and run directly
+# Or install directly from formula
+brew install diskcleanup.rb
+```
+
+**Manual Installation:**
+```bash
+# Download and run directly
 curl -LO https://raw.githubusercontent.com/chibuenyim/UniversalDiskCleanupTool/main/cleanup.ps1
 pwsh -File cleanup.ps1 --all
 ```
 
 ### 🐧 Linux
 
+**Ubuntu/Debian (.deb package):**
 ```bash
-# Ubuntu/Debian
+# Download from releases
 wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/diskcleanup_3.0.0_all.deb
 sudo dpkg -i diskcleanup_3.0.0_all.deb
+sudo apt-get install -f  # Fix dependencies if needed
 
-# Fedora/RHEL
+# Run cleanup
+diskcleanup --all
+```
+
+**Fedora/RHEL (.rpm package):**
+```bash
+# Download from releases
 wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/diskcleanup-3.0.0-1.noarch.rpm
 sudo dnf install diskcleanup-3.0.0-1.noarch.rpm
 
-# Or run directly with PowerShell
+# Run cleanup
+diskcleanup --all
+```
+
+**Arch Linux (AUR):**
+```bash
+yay -S diskcleanup
+```
+
+**AppImage (Universal Linux):**
+```bash
+# Download from releases
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/DiskCleanupTool-3.0.0-x86_64.AppImage
+chmod +x DiskCleanupTool-3.0.0-x86_64.AppImage
+./DiskCleanupTool-3.0.0-x86_64.AppImage --all
+```
+
+**Snap Store:**
+```bash
+sudo snap install diskcleanup
+```
+
+**Manual Installation:**
+```bash
+# Download and run with PowerShell
 curl -LO https://raw.githubusercontent.com/chibuenyim/UniversalDiskCleanupTool/main/cleanup.ps1
 pwsh -File cleanup.ps1 --all
 ```
 
 ### 💻 Windows
 
+**Download from Releases:**
 ```powershell
-# Download and run
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/chibuenyim/UniversalDiskCleanupTool/main/cleanup.ps1" -OutFile "cleanup.ps1"
+# Download cleanup.ps1 from releases
+Invoke-WebRequest -Uri "https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v3.0.0/cleanup.ps1" -OutFile "cleanup.ps1"
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 .\cleanup.ps1 --all
 ```
@@ -125,6 +165,15 @@ git clone https://github.com/chibuenyim/UniversalDiskCleanupTool.git
 cd UniversalDiskCleanupTool
 pwsh -File cleanup.ps1 --all
 ```
+
+### 📦 Available Packages
+
+**Automatically built on releases:**
+- **Homebrew** (macOS): `diskcleanup.rb`
+- **.deb** (Ubuntu/Debian): `diskcleanup_3.0.0_all.deb`
+- **.rpm** (Fedora/RHEL): `diskcleanup-3.0.0-1.noarch.rpm`
+- **AppImage** (Universal Linux): `DiskCleanupTool-3.0.0-x86_64.AppImage`
+- **Snap** (Linux distributions): `diskcleanup_3.0.0_amd64.snap`
 
 ---
 

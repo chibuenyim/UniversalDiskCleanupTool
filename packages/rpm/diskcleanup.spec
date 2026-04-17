@@ -1,64 +1,55 @@
 Name:           diskcleanup
-Version:        2.0.0
+Version:        3.0.0
 Release:        1%{?dist}
-Summary:        Universal disk cleanup utility
+Summary:        Cross-platform disk cleanup utility
+
 License:        MIT
-URL:            https://github.com/chibuenyim/DiskCleanupTool
+URL:            https://github.com/chibuenyim/UniversalDiskCleanupTool
 Source0:        %{name}-%{version}.tar.gz
 
-Requires:       powershell >= 7.0
+Requires:       pwsh >= 7.0
+
+BuildArch:      noarch
 
 %description
-A cross-platform disk cleanup utility for Windows, macOS, and Linux.
-Cleans temporary files, browser caches, developer caches, and more.
+Universal Disk Cleanup Tool is a powerful utility designed to free up
+valuable disk space by removing temporary files, caches, logs, and
+other junk that accumulates over time.
+
+It supports cleaning:
+ - Temporary files and caches
+ - Browser caches (Chrome, Firefox, Brave, etc.)
+ - Developer tool caches (npm, yarn, pip, Docker, etc.)
+ - Package manager caches (apt, dnf, yum, etc.)
+ - Application caches (Spotify, Discord, Slack, etc.)
+ - System files and logs
 
 %prep
 %autosetup
 
-%build
-# No build required
-
 %install
-rm -rf %{buildroot}
+mkdir -p %{buildroot}%{_datadir}/%{name}
+mkdir -p %{buildroot}%{_bindir}
 
-# Create directories
-mkdir -p %{buildroot}/usr/local/bin
-mkdir -p %{buildroot}/usr/share/applications
-mkdir -p %{buildroot}/usr/share/doc/%{name}
-
-# Install files
-install -m 644 cleanup.ps1 %{buildroot}/usr/local/bin/
-install -m 755 install.sh %{buildroot}/usr/local/bin/diskcleanup-installer.sh
-install -m 644 diskcleanup.desktop %{buildroot}/usr/share/applications/
-install -m 644 README.md %{buildroot}/usr/share/doc/%{name}/
-install -m 644 LICENSE %{buildroot}/usr/share/doc/%{name}/
+install -m 644 cleanup.ps1 %{buildroot}%{_datadir}/%{name}/
+install -m 644 README.md %{buildroot}%{_datadir}/%{name}/
+install -m 644 LICENSE %{buildroot}%{_datadir}/%{name}/
 
 # Create wrapper script
-cat > %{buildroot}/usr/local/bin/cleanup << 'EOF'
+cat > %{buildroot}%{_bindir}/%{name} << 'WRAPPER'
 #!/bin/bash
-pwsh -NoProfile -ExecutionPolicy Bypass -File /usr/local/bin/cleanup.ps1 "$@"
-EOF
-chmod +x %{buildroot}/usr/local/bin/cleanup
+pwsh -File "%{_datadir}/%{name}/cleanup.ps1" "$@"
+WRAPPER
+
+chmod +x %{buildroot}%{_bindir}/%{name}
 
 %files
-/usr/local/bin/cleanup.ps1
-/usr/local/bin/cleanup
-/usr/local/bin/diskcleanup-installer.sh
-/usr/share/applications/diskcleanup.desktop
-/usr/share/doc/%{name}/*
+%{_bindir}/%{name}
+%{_datadir}/%{name}/*
+
+%doc README.md
 %license LICENSE
 
-%post
-# Create symlink
-ln -sf /usr/local/bin/cleanup /usr/local/bin/diskcleanup 2>/dev/null || true
-
-echo "Disk Cleanup Tool installed successfully!"
-echo "Run 'cleanup --help' for usage information."
-
-%preun
-# Remove symlink
-rm -f /usr/local/bin/diskcleanup 2>/dev/null || true
-
 %changelog
-* $(date +'%a %b %d %Y') chibuenyim <chibuenyim@users.noreply.github.com> - 2.0.0-1
+* $(date +'%a %b %d %Y') chibuenyim <chibuenyim@users.noreply.github.com> - 3.0.0-1
 - Initial package release

@@ -1,0 +1,53 @@
+name: diskcleanup
+version: '3.0.0'
+summary: Cross-platform disk cleanup utility
+description: |
+  Universal Disk Cleanup Tool is a powerful utility designed to free up
+  valuable disk space by removing temporary files, caches, logs, and
+  other junk that accumulates over time.
+
+  It supports cleaning:
+   - Temporary files and caches
+   - Browser caches (Chrome, Firefox, Brave, etc.)
+   - Developer tool caches (npm, yarn, pip, Docker, etc.)
+   - Package manager caches (apt, dnf, yum, etc.)
+   - Application caches (Spotify, Discord, Slack, etc.)
+   - System files and logs
+
+grade: stable
+confinement: strict
+base: core20
+
+apps:
+  diskcleanup:
+    command: snap-wrap diskcleanup
+    plugs:
+      - home
+      - system-files
+      - network
+    environment:
+      PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
+
+parts:
+  diskcleanup:
+    plugin: dump
+    source: .
+    organize:
+      cleanup.ps1: usr/bin/cleanup.ps1
+      README.md: usr/share/doc/diskcleanup/README.md
+      LICENSE: usr/share/doc/diskcleanup/LICENSE
+    stage-packages:
+      - wget
+      - curl
+
+  wrapper:
+    plugin: dump
+    source: .
+    override-build: |
+      snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cat > $SNAPCRAFT_PART_INSTALL/bin/snap-wrap << 'WRAPPER'
+      #!/bin/bash
+      pwsh -File "$SNAP/usr/bin/cleanup.ps1" "$@"
+      WRAPPER
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/snap-wrap

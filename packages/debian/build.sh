@@ -1,103 +1,62 @@
 #!/bin/bash
-# Build Debian Package for Universal Disk Cleanup Tool
+# Build deb package for Universal Disk Cleanup Tool
 
 set -e
 
-VERSION="2.0.0"
-PACKAGE_NAME="diskcleanup"
-WORK_DIR="build"
-DEBIAN_DIR="$WORK_DIR/debian"
+VERSION="3.0.0"
+NAME="diskcleanup"
+PKG_DIR="deb-package"
+BUILD_DIR="${PKG_DIR}/opt/${NAME}"
+SRC_DIR=$(pwd)/../..
 
-echo "=========================================="
-echo "  Building Debian Package"
-echo "=========================================="
-echo ""
+echo "Building ${NAME} ${VERSION} deb package..."
 
 # Clean previous builds
-rm -rf "$WORK_DIR"
+rm -rf ${PKG_DIR}
 
-# Create directory structure
-mkdir -p "$DEBIAN_DIR/DEBIAN"
-mkdir -p "$DEBIAN_DIR/usr/local/bin"
-mkdir -p "$DEBIAN_DIR/usr/share/applications"
-mkdir -p "$DEBIAN_DIR/usr/share/pixmaps"
+# Create package directory structure
+mkdir -p ${BUILD_DIR}
+mkdir -p ${PKG_DIR}/DEBIAN
+mkdir -p ${PKG_DIR}/usr/local/bin
+mkdir -p ${PKG_DIR}/usr/share/man/man1
+mkdir -p ${PKG_DIR}/usr/share/doc/${NAME}
 
 # Copy files
-cp cleanup.ps1 "$DEBIAN_DIR/usr/local/bin/cleanup.ps1"
-cp install.sh "$DEBIAN_DIR/usr/local/bin/diskcleanup-installer.sh"
-cp diskcleanup.desktop "$DEBIAN_DIR/usr/share/applications/"
+cp ${SRC_DIR}/cleanup.ps1 ${BUILD_DIR}/
+cp ${SRC_DIR}/README.md ${PKG_DIR}/usr/share/doc/${NAME}/
+cp ${SRC_DIR}/LICENSE ${PKG_DIR}/usr/share/doc/${NAME}/
+
+# Create wrapper script
+cat > ${PKG_DIR}/usr/local/bin/${NAME} << 'WRAPPER'
+#!/bin/bash
+# Wrapper script for diskcleanup
+
+SCRIPT_DIR="/opt/diskcleanup"
+pwsh -File "${SCRIPT_DIR}/cleanup.ps1" "$@"
+WRAPPER
+
+chmod +x ${PKG_DIR}/usr/local/bin/${NAME}
 
 # Create control file
-cat > "$DEBIAN_DIR/DEBIAN/control" << EOF
-Package: $PACKAGE_NAME
-Version: $VERSION
+cat > ${PKG_DIR}/DEBIAN/control << EOF
+Package: ${NAME}
+Version: ${VERSION}
 Section: utils
 Priority: optional
 Architecture: all
 Depends: powershell (>= 7.0)
 Maintainer: chibuenyim <chibuenyim@users.noreply.github.com>
-Description: Universal disk cleanup utility
- A cross-platform disk cleanup utility for Windows, macOS, and Linux.
- Cleans temporary files, browser caches, developer caches, and more.
-Homepage: https://github.com/chibuenyim/DiskCleanupTool
-EOF
-
-# Create postinst script
-cat > "$DEBIAN_DIR/DEBIAN/postinst" << 'EOF'
-#!/bin/bash
-set -e
-
-# Create wrapper script
-cat > /usr/local/bin/cleanup << 'WRAPPER'
-#!/bin/bash
-pwsh -NoProfile -ExecutionPolicy Bypass -File /usr/local/bin/cleanup.ps1 "$@"
-WRAPPER
-
-chmod +x /usr/local/bin/cleanup
-
-# Create symlink
-ln -sf /usr/local/bin/cleanup /usr/local/bin/diskcleanup
-
-echo "Disk Cleanup Tool installed successfully!"
-echo "Run 'cleanup --help' for usage information."
-
-#DEBHELPER#
-
-exit 0
-EOF
-
-chmod +x "$DEBIAN_DIR/DEBIAN/postinst"
-
-# Create prerm script
-cat > "$DEBIAN_DIR/DEBIAN/prerm" << 'EOF'
-#!/bin/bash
-set -e
-
-# Remove symlinks
-rm -f /usr/local/bin/diskcleanup
-
-#DEBHELPER#
-
-exit 0
-EOF
-
-chmod +x "$DEBIAN_DIR/DEBIAN/prerm"
-
-# Calculate installed size
-INSTALLED_SIZE=$(du -sk "$DEBIAN_DIR" | cut -f1)
-echo "Installed-Size: $INSTALLED_SIZE" >> "$DEBIAN_DIR/DEBIAN/control"
-
-# Build the package
-dpkg-deb --build "$DEBIAN_DIR" "${PACKAGE_NAME}_${VERSION}_all.deb"
-
-echo ""
-echo "=========================================="
-echo "  Build Complete!"
-echo "=========================================="
-echo ""
-echo "Package: ${PACKAGE_NAME}_${VERSION}_all.deb"
-echo "Size: $(stat -f%z "${PACKAGE_NAME}_${VERSION}_all.deb" 2>/dev/null || stat -c%s "${PACKAGE_NAME}_${VERSION}_all.deb") bytes"
-echo ""
-echo "To install:"
-echo "  sudo dpkg -i ${PACKAGE_NAME}_${VERSION}_all.deb"
-echo ""
+Description: Cross-platform disk cleanup utility
+ Universal Disk Cleanup Tool is a powerful utility designed to free up
+ valuable disk space by removing temporary files, caches, logs, and
+ other junk that accumulates over time.
+ .
+ It supports cleaning:
+  - Temporary files and caches
+  - Browser caches (Chrome, Firefox, Brave, etc.)
+  - Developer tool caches (npm, yarn, pip, Docker, etc.)
+  - Package manager caches (apt, dnf, yum, etc.)
+  - Application caches (Spotify, Discord, Slack, etc.)
+  - System files and logs
+ .
+ This package works on Debian, Ubuntu, and other deb-based distributions.

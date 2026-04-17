@@ -3,69 +3,41 @@
 
 set -e
 
-VERSION="2.0.0"
-APP_NAME="DiskCleanupTool"
-WORK_DIR="build"
-APP_DIR="$WORK_DIR/$APP_NAME.AppDir"
+VERSION="3.0.0"
+NAME="diskcleanup"
+APP_DIR="${NAME}.AppDir"
+SRC_DIR=$(pwd)/../..
 
-echo "=========================================="
-echo "  Building AppImage"
-echo "=========================================="
-echo ""
+echo "Building ${NAME} ${VERSION} AppImage..."
 
 # Clean previous builds
-rm -rf "$WORK_DIR"
+rm -rf ${APP_DIR}
+rm -rf ${NAME}*.AppImage
 
 # Create AppDir structure
-mkdir -p "$APP_DIR/usr/bin"
-mkdir -p "$APP_DIR/usr/share/applications"
-mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
+mkdir -p ${APP_DIR}/usr/bin
+mkdir -p ${APP_DIR}/usr/share/applications
+mkdir -p ${APP_DIR}/usr/share/icons/hicolor/256x256/apps
 
-# Copy files
-cp cleanup.ps1 "$APP_DIR/usr/bin/"
-cp diskcleanup.desktop "$APP_DIR/$APP_NAME.desktop"
+# Copy PowerShell script
+cp ${SRC_DIR}/cleanup.ps1 ${APP_DIR}/usr/bin/
 
-# Create AppRun
-cat > "$APP_DIR/AppRun" << 'EOF'
+# Create wrapper script
+cat > ${APP_DIR}/usr/bin/${NAME} << 'WRAPPER'
 #!/bin/bash
-SELF=$(readlink -f "$0")
-HERE=${SELF%/*}
-export PATH="${HERE}/usr/bin:${PATH}"
-pwsh -NoProfile -ExecutionPolicy Bypass -File "${HERE}/usr/bin/cleanup.ps1" "$@"
-EOF
-chmod +x "$APP_DIR/AppRun"
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+pwsh -File "${SCRIPT_DIR}/cleanup.ps1" "$@"
+WRAPPER
 
-# Create .desktop file
-cat > "$APP_DIR/$APP_NAME.desktop" << EOF
+chmod +x ${APP_DIR}/usr/bin/${NAME}
+
+# Create desktop file
+cat > ${APP_DIR}/${NAME}.desktop << EOF
 [Desktop Entry]
-Version=1.0
-Type=Application
 Name=Disk Cleanup Tool
-Comment=Universal disk cleanup utility
-Exec=cleanup
-Icon=diskcleanup
+Comment=Cross-platform disk cleanup utility
+Exec=${NAME}
+Icon=${NAME}
 Terminal=true
+Type=Application
 Categories=System;Utility;
-EOF
-
-# Download appimagetool
-if [ ! -f "appimagetool-x86_64.AppImage" ]; then
-    echo "Downloading appimagetool..."
-    wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-    chmod +x appimagetool-x86_64.AppImage
-fi
-
-# Build AppImage
-echo "Building AppImage..."
-./appimagetool-x86_64.AppImage "$APP_DIR" "${APP_NAME}-${VERSION}-x86_64.AppImage"
-
-echo ""
-echo "=========================================="
-echo "  Build Complete!"
-echo "=========================================="
-echo ""
-echo "AppImage: ${APP_NAME}-${VERSION}-x86_64.AppImage"
-echo ""
-echo "To run:"
-echo "  ./${APP_NAME}-${VERSION}-x86_64.AppImage"
-echo ""
