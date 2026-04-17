@@ -13,10 +13,9 @@
 ### Windows:
 1. Download from: https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
 2. Extract ZIP
-3. Double-click `START.bat` or run:
-   ```powershell
-   pwsh -File cleanup.ps1 --All
-   ```
+3. **Double-click `START.bat`**
+4. If PowerShell 7+ is missing, we will install it automatically for you!
+5. A beautiful GUI will open - choose what to clean and click Start!
 
 ### macOS:
 ```bash
@@ -28,28 +27,57 @@ chmod +x start.sh
 ./start.sh
 ```
 
-### Linux:
+### Linux (Ubuntu/Debian):
 ```bash
-# Install PowerShell (Ubuntu/Debian)
+# Install PowerShell (Ubuntu 20.04+)
+# Download Microsoft repository configuration
+wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+
+# Update and install
+sudo apt-get update
 sudo apt-get install -y powershell
+
+# Download and run this tool
+chmod +x start.sh
+./start.sh
+```
+
+### Linux (Fedora):
+```bash
+# Import Microsoft key
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+
+# Install PowerShell
+sudo dnf install -y powershell
 
 # Download and run
 chmod +x start.sh
 ./start.sh
 ```
 
-That's it! The cleanup will start automatically.
+### Linux (Arch):
+```bash
+# Install from AUR
+yay -S powershell
+
+# Download and run
+chmod +x start.sh
+./start.sh
+```
 
 ---
 
 ## ✨ Features
 
+- **Beautiful GUI** - Windows users get a graphical interface (NEW!)
 - **Cross-Platform** - Works on Windows, macOS, and Linux
-- **Easy to Use** - Simple command or launcher
+- **Easy to Use** - Simple launcher for each platform
 - **Safe** - Never deletes your documents or personal files
 - **Fast** - Cleans in minutes, not hours
 - **Powerful** - Frees up to 45 GB of space
 - **Smart** - Knows exactly what to clean
+- **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing (NEW!)
 
 ---
 
@@ -63,7 +91,7 @@ That's it! The cleanup will start automatically.
 | Package Caches | 1-5 GB |
 | Application Caches | 1-5 GB |
 | System Files | 2-8 GB |
-| **Total** | **20-40 GB** |
+| **Total** | **20-45 GB** |
 
 ---
 
@@ -87,37 +115,52 @@ That's it! The cleanup will start automatically.
 
 ## 🎯 How to Use
 
+### Windows:
+```
+Double-click START.bat
+A GUI will open - choose what to clean and click Start!
+```
+
+### macOS/Linux:
 ```bash
 ./start.sh
 ```
 
-Then:
-1. Choose "GUI Mode" or "Quick Cleanup"
-2. Select what to clean
-3. Wait for progress
-4. See how much space you freed!
+That's it! The cleanup will start automatically.
 
 ---
 
 ## 📦 What's Included
 
-- `start.sh` - Click this to start!
-- `cleanup.ps1` - Main cleanup script
-- `compress.sh` - Compression utility
-- `README.txt` - Quick reference guide
+- `START.bat` - Windows GUI launcher
+- `start.sh` - Unix launcher  
+- `launcher.ps1` - GUI launcher for Windows
+- `install-pwsh.ps1` - Automatic PowerShell 7+ installer
+- `cleanup.ps1` - Cross-platform cleanup script
+- `README.md` - This file
+- `README.txt` - Quick reference
+- `LICENSE` - MIT License
 
 ---
 
 ## 💡 Tips
 
-- **First time?** Use Quick Cleanup
-- **Developer?** Include --Dev option
-- **Low disk space?** Use --All for max cleanup
+- **First time?** Just run the launcher
+- **Windows user?** Double-click START.bat for the GUI
+- **Developer?** Choose "Developer Tools" in the GUI for extra cleanup
 - **Run monthly** for best results
+- **Safe to run anytime**
 
 ---
 
 ## 📈 Expected Results
+
+### Windows:
+```
+Before:  5 GB free
+After:   30 GB free
+Freed:   25 GB
+```
 
 ### macOS:
 ```
@@ -145,11 +188,14 @@ Freed:   30 GB
 
 ## 🌟 What's New in v5.0
 
-- ✅ Cleaner, simpler interface
-- ✅ Faster cleanup
-- ✅ Better progress tracking
-- ✅ More safety features
-- ✅ Easier than ever to use
+- ✅ **Beautiful GUI** - Windows users now get a graphical interface!
+- ✅ **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing!
+- ✅ **Windows Support** - Now works on Windows too!
+- ✅ **Cleaner interface** - Simplified for all platforms
+- ✅ **Faster cleanup** - Optimized performance
+- ✅ **Better progress tracking** - See what's happening
+- ✅ **More safety features** - Won't delete your files
+- ✅ **Easier than ever** - Just run and go
 
 ---
 
@@ -161,7 +207,7 @@ MIT License - Free to use, modify, and distribute
 
 ## ⭐ Enjoy Your Free Space!
 
-Made with ❤️ for macOS and Linux users worldwide
+Made with ❤️ for Windows, macOS, and Linux users worldwide
 
 **Version:** 5.0.0 (Stable Production Release)
 **Release Date:** 2025

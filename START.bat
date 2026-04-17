@@ -1,31 +1,26 @@
 @echo off
 REM ============================================
 REM  Universal Disk Cleanup Tool v5.0
-REM  For Windows
+REM  For Windows - GUI Launcher with Auto-Install
 REM ============================================
 
 title Universal Disk Cleanup Tool v5.0
 
-echo.
-echo ============================================
-echo    Universal Disk Cleanup Tool v5.0
-echo    Starting...
-echo ============================================
-echo.
-
-REM Check for PowerShell
+REM Check for PowerShell Core (pwsh)
 where pwsh >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo PowerShell Core not found.
-    echo Please install PowerShell 7+ from:
-    echo https://github.com/PowerShell/PowerShell/releases
-    pause
-    exit /b 1
+    REM PowerShell Core not found - run installer
+    PowerShell -ExecutionPolicy Bypass -NoProfile -File "%~dp0install-pwsh.ps1"
+    exit /b %ERRORLEVEL%
 )
 
-REM Run cleanup
-pwsh -ExecutionPolicy Bypass -File cleanup.ps1 --All
+REM Run GUI launcher
+pwsh -ExecutionPolicy Bypass -NoProfile -File "%~dp0launcher.ps1"
 
-echo.
-echo Cleanup complete!
-pause
+if %ERRORLEVEL% neq 0 (
+    echo.
+    echo ERROR: Failed to launch the application.
+    echo Please make sure all files are extracted properly.
+    echo.
+    pause
+)
