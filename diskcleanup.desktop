@@ -1,0 +1,27 @@
+[Desktop Entry]
+Version=2.0
+Type=Application
+Name=Disk Cleanup Tool
+Comment=Universal disk cleanup utility
+Exec=pkexec /usr/local/bin/cleanup --all
+Icon=diskcleanup
+Terminal=true
+Categories=System;Utility;
+Keywords=cleanup;disk;storage;cache;
+Actions=cleanup-all;cleanup-temp;cleanup-browser;cleanup-dev;
+
+[Desktop Action cleanup-all]
+Name=Clean Everything
+Exec=pkexec /usr/local/bin/cleanup --all
+
+[Desktop Action cleanup-temp]
+Name=Clean Temp Files
+Exec=pkexec /usr/local/bin/cleanup --temp
+
+[Desktop Action cleanup-browser]
+Name=Clean Browser Caches
+Exec=pkexec /usr/local/bin/cleanup --browser
+
+[Desktop Action cleanup-dev]
+Name=Clean Developer Caches
+Exec=pkexec /usr/local/bin/cleanup --dev

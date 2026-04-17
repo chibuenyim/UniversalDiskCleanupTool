@@ -1,0 +1,8 @@
+#!/bin/bash
+# Disk Cleanup Tool - macOS App Launcher
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_PATH="$SCRIPT_DIR/../../../cleanup.ps1"
+
+# Launch PowerShell with the cleanup script
+pwsh -NoProfile -ExecutionPolicy Bypass -File "$SCRIPT_PATH" "$@"
