@@ -1410,6 +1410,14 @@ if (-not $Quiet) {
     Write-Host ""
     Write-Host "  ✓ Cleanup complete!" -ForegroundColor Green
     Write-Host ""
+    # Add important note about disk space
+    Write-Host "  NOTE: Disk space change may take a few minutes to" -ForegroundColor Yellow
+    Write-Host "         reflect in Windows Explorer/File Manager." -ForegroundColor Yellow
+    Write-Host "         The actual space has been freed, but the OS" -ForegroundColor Yellow
+    Write-Host "         may delay updating the display counter." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Files deleted:    $(Format-Bytes $totalFreed)" -ForegroundColor Cyan
+    Write-Host ""
     Write-Host "  Press Enter to exit..." -ForegroundColor Yellow
     Write-Host ""
     
