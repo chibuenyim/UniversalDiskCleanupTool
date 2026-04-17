@@ -1388,8 +1388,16 @@ if (-not $Quiet) {
     Write-Host "============================================" -ForegroundColor Gray
     Write-Host ""
     
-    Write-Host "  SPACE FREED: " -NoNewline
-    Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor Green -BackgroundColor DarkGray
+    # Make SPACE FREED very prominent
+    Write-Host "  ╔════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host "  ║                                      ║" -ForegroundColor Green
+    Write-Host "  ║" -NoNewline -ForegroundColor Green
+    Write-Host "   SPACE FREED: " -NoNewline
+    Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor White -BackgroundColor Green
+    Write-Host "   " -NoNewline -ForegroundColor Green
+    Write-Host "║" -ForegroundColor Green
+    Write-Host "  ║                                      ║" -ForegroundColor Green
+    Write-Host "  ╚════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
     
     if ($totalFreed -gt 0) {
@@ -1400,8 +1408,13 @@ if (-not $Quiet) {
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  Cleanup complete!" -ForegroundColor Green -BackgroundColor DarkGray
+    Write-Host "  ✓ Cleanup complete!" -ForegroundColor Green
     Write-Host ""
+    Write-Host "  Press Enter to exit..." -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Wait for user confirmation
+    $null = Read-Host
     Write-Host "  Log file: $($script:Config.LogFile)" -ForegroundColor Gray
     Write-Host ""
 }
