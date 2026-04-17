@@ -109,7 +109,7 @@ function Show-InstallDialog {
 
     # Auto-install button
     $autoBtn = New-Object System.Windows.Forms.Button
-    $autoBtn.Text = "🚀 Install Automatically"
+    $autoBtn.Text = "Install Automatically"
     $autoBtn.Location = New-Object System.Drawing.Point(20, 170)
     $autoBtn.Size = New-Object System.Drawing.Size(450, 45)
     $autoBtn.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
@@ -130,7 +130,7 @@ function Show-InstallDialog {
 
     # Manual button
     $manualBtn = New-Object System.Windows.Forms.Button
-    $manualBtn.Text = "📥 Download Manually"
+    $manualBtn.Text = "Download Manually"
     $manualBtn.Location = New-Object System.Drawing.Point(20, 230)
     $manualBtn.Size = New-Object System.Drawing.Size(215, 45)
     $manualBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10)
