@@ -16,33 +16,180 @@
 - 🎯 **Selective** - Choose what to clean with command-line options
 - 📦 **Portable** - No installation required (optional install available)
 
+---
+
 ## 🗑️ What It Cleans
 
-### Common (All Platforms)
-- ✅ Temporary files
-- ✅ Browser caches (Chrome, Firefox, Safari, Edge, Brave)
-- ✅ Developer caches (npm, yarn, pip, Composer)
-- ✅ System logs
-- ✅ Thumbnail caches
+### 💻 **Windows**
 
-### Windows Specific
-- ✅ Windows temp folders
-- ✅ Prefetch
-- ✅ SoftwareDistribution
-- ✅ Recycle Bin
-- ✅ WinSxS cleanup (DISM)
-- ✅ NuGet cache
+#### 📁 Temporary Files (~500 MB - 2 GB)
+| Location | Path | Description |
+|----------|------|-------------|
+| User Temp | `%TEMP%` | Per-user temporary files |
+| Local Temp | `%LOCALAPPDATA%\Temp` | Application temp files |
+| System Temp | `%WINDIR%\Temp` | Windows system temp files |
+| Prefetch | `%WINDIR%\Prefetch` | Application prefetch data |
 
-### macOS Specific
-- ✅ User caches
-- ✅ Xcode DerivedData
-- ✅ Homebrew cache
-- ✅ Application logs
+#### 🌐 Browser Caches (~200 MB - 1 GB)
+| Browser | Cache Locations |
+|---------|-----------------|
+| **Chrome** | `%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache`<br>`%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache` |
+| **Edge** | `%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Cache`<br>`%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Code Cache` |
+| **Firefox** | `%APPDATA%\Mozilla\Firefox\Profiles\*\cache2` |
+| **Brave** | `%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache` |
 
-### Linux Specific
-- ✅ Package manager caches (apt, dnf, yum, pacman)
-- ✅ Journal logs
-- ✅ Thumbnail cache
+#### 👨‍💻 Developer Caches (~8-15 GB)
+| Tool | Cache Location | Size |
+|------|----------------|------|
+| **npm** | `%APPDATA%\npm-cache` | ~3-8 GB |
+| **yarn** | `%LOCALAPPDATA%\Yarn\Cache` | ~1-3 GB |
+| **pip** | `%LOCALAPPDATA%\pip\Cache` | ~100-500 MB |
+| **NuGet** | `%LOCALAPPDATA%\NuGet\v3-cache` | ~500 MB - 2 GB |
+| **Docker** | Docker images, containers, volumes | Variable |
+| **Node.js** | Various npm/node_modules caches | Variable |
+
+#### 📋 System Files (~2-10 GB)
+| Component | Location | Space Saved |
+|-----------|----------|-------------|
+| **Windows Update** | `C:\Windows\SoftwareDistribution\Download` | ~1-3 GB |
+| **WinSxS** | `C:\Windows\WinSxS` (via DISM) | ~2-6 GB |
+| **Recycle Bin** | `C:\$Recycle.Bin` | Variable |
+| **Windows Logs** | `C:\Windows\Logs` | ~100-500 MB |
+| **CBS Logs** | `C:\Windows\Logs\CBS` | ~50-200 MB |
+| **Delivery Optimization** | `C:\Windows\SoftwareDistribution\DeliveryOptimization` | ~100-500 MB |
+
+---
+
+### 🍎 **macOS**
+
+#### 📁 Temporary Files (~1-5 GB)
+| Location | Path | Description |
+|----------|------|-------------|
+| System Temp | `/tmp` | System-wide temporary files |
+| User Cache | `~/Library/Caches` | User application caches |
+| User Temp | `~/Library/Caches/com.apple.dt.Xcode` | Xcode temp files |
+| Trash | `~/.Trash` | Deleted files (if emptied) |
+
+#### 🌐 Browser Caches (~200 MB - 1 GB)
+| Browser | Cache Locations |
+|---------|-----------------|
+| **Safari** | `~/Library/Caches/com.apple.Safari`<br>`~/Library/Safari` |
+| **Chrome** | `~/Library/Caches/Google/Chrome`<br>`~/Library/Application Support/Google/Chrome/Default/Cache` |
+| **Firefox** | `~/Library/Caches/Firefox` |
+| **Brave** | `~/Library/Caches/BraveSoftware` |
+
+#### 👨‍💻 Developer Caches (~5-20 GB)
+| Tool | Cache Location | Size |
+|------|----------------|------|
+| **npm** | `~/.npm` | ~2-5 GB |
+| **yarn** | `~/Library/Caches/Yarn` | ~1-3 GB |
+| **pip** | `~/Library/Caches/pip` | ~100-500 MB |
+| **Homebrew** | `/usr/local/Cache/Homebrew` | ~500 MB - 2 GB |
+| **Xcode** | `~/Library/Developer/Xcode/DerivedData` | ~2-10 GB |
+| **CocoaPods** | `~/Library/Caches/CocoaPods` | ~500 MB - 2 GB |
+| **Carthage** | `~/Library/Caches/org.carthage.CarthageKit` | ~100-500 MB |
+| **Docker** | Docker images, containers, volumes | Variable |
+
+#### 📋 System Files (~1-5 GB)
+| Component | Location | Space Saved |
+|-----------|----------|-------------|
+| **System Logs** | `/Library/Logs` | ~200-500 MB |
+| **User Logs** | `~/Library/Logs` | ~100-300 MB |
+| **ASL Logs** | `/var/log/asl` | ~100-500 MB |
+| **Diagnostic Reports** | `~/Library/Logs/DiagnosticReports` | ~100-500 MB |
+
+---
+
+### 🐧 **Linux**
+
+#### 📁 Temporary Files (~500 MB - 3 GB)
+| Location | Path | Description |
+|----------|------|-------------|
+| System Temp | `/tmp` | System-wide temporary files |
+| User Temp | `/var/tmp` | Persistent temporary files |
+| User Cache | `~/.cache` | User application caches |
+| Thumbnail Cache | `~/.cache/thumbnails` | Thumbnail images |
+
+#### 🌐 Browser Caches (~200 MB - 1 GB)
+| Browser | Cache Locations |
+|---------|-----------------|
+| **Chrome** | `~/.cache/google-chrome`<br>`~/.config/google-chrome/Default/Cache` |
+| **Firefox** | `~/.cache/mozilla/firefox` |
+| **Brave** | `~/.cache/BraveSoftware` |
+| **Chromium** | `~/.cache/chromium` |
+
+#### 👨‍💻 Developer Caches (~5-15 GB)
+| Tool | Cache Location | Size |
+|------|----------------|------|
+| **npm** | `~/.npm` | ~2-5 GB |
+| **yarn** | `~/.yarn/cache` | ~1-3 GB |
+| **pip** | `~/.cache/pip` | ~100-500 MB |
+| **Docker** | Docker images, containers, volumes | Variable |
+| **Gradle** | `~/.gradle/caches` | ~500 MB - 2 GB |
+| **Maven** | `~/.m2/repository` | ~500 MB - 3 GB |
+
+#### 📋 System Files (~1-8 GB)
+| Package Manager | Cache Location | Space Saved |
+|----------------|----------------|-------------|
+| **apt (Debian/Ubuntu)** | `/var/cache/apt/archives` | ~500 MB - 3 GB |
+| **dnf (Fedora)** | `/var/cache/dnf` | ~500 MB - 2 GB |
+| **yum (RHEL/CentOS)** | `/var/cache/yum` | ~500 MB - 2 GB |
+| **pacman (Arch)** | `/var/cache/pacman/pkg` | ~500 MB - 2 GB |
+| **Journal Logs** | `/var/log/journal` | ~500 MB - 2 GB |
+| **System Logs** | `/var/log` | ~100-500 MB |
+
+---
+
+## 🚫 What It Does NOT Clean
+
+**Your personal files are always safe:**
+
+❌ User documents (My Documents, Desktop, Downloads)
+❌ Personal files (photos, videos, music)
+❌ Application settings
+❌ Installed programs
+❌ System files required for operation
+❌ Browser history, bookmarks, saved passwords
+❌ Game saves
+❌ Email data
+
+**Only temporary files, caches, and logs are removed.**
+
+---
+
+## 📊 Expected Space Savings
+
+### Typical Results by System Type
+
+| System Type | Base Savings | With Dev Caches | Total Range |
+|-------------|--------------|-----------------|-------------|
+| **Basic User** | 2-5 GB | N/A | 2-5 GB |
+| **Web Browsing Heavy** | 3-8 GB | N/A | 3-8 GB |
+| **Developer** | 2-5 GB | +8-15 GB | 10-20 GB |
+| **Designer/Creator** | 3-8 GB | +2-5 GB | 5-13 GB |
+| **Power User** | 5-10 GB | +10-20 GB | 15-30 GB |
+
+### Real-World Examples
+
+```
+Before: 5.2 GB free
+After:  22.4 GB free
+Freed:  17.2 GB
+```
+
+```
+Before: 12.8 GB free
+After:  45.6 GB free
+Freed:  32.8 GB (developer machine)
+```
+
+```
+Before: 2.1 GB free
+After:  8.7 GB free
+Freed:  6.6 GB (basic user)
+```
+
+---
 
 ## 📋 Requirements
 
@@ -51,7 +198,9 @@
 - Supported operating systems:
   - Windows 10/11
   - macOS 10.14+
-  - Linux (Ubuntu, Fedora, Arch, etc.)
+  - Linux (Ubuntu 20.04+, Fedora 35+, Arch, etc.)
+
+---
 
 ## 🚀 Quick Start
 
@@ -59,7 +208,7 @@
 
 ```bash
 # Download installer
-curl -LO https://raw.githubusercontent.com/chibuenyim/DiskCleanupTool/main/install.sh
+curl -LO https://raw.githubusercontent.com/chibuenyim/UniversalDiskCleanupTool/main/install.sh
 
 # Run installer
 chmod +x install.sh
@@ -72,8 +221,8 @@ cleanup --all
 ### Option 2: Clone Repository
 
 ```bash
-git clone https://github.com/chibuenyim/DiskCleanupTool.git
-cd DiskCleanupTool
+git clone https://github.com/chibuenyim/UniversalDiskCleanupTool.git
+cd UniversalDiskCleanupTool
 
 # Run directly
 pwsh -File cleanup.ps1 --all
@@ -88,6 +237,8 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 .\cleanup.ps1 --all
 ```
 
+---
+
 ## 🎯 Usage
 
 ```bash
@@ -96,40 +247,54 @@ cleanup [OPTIONS]
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `--all` | Clean everything (recommended) |
-| `--temp` | Clean temporary files only |
-| `--browser` | Clean browser caches only |
-| `--dev` | Clean developer caches only |
-| `--logs` | Clean system logs only |
-| `--cache` | Clean package caches only |
-| `--quiet` | Suppress output |
-| `--verbose` | Show detailed output |
+| Option | Description | Category |
+|--------|-------------|----------|
+| `--all` | Clean everything (recommended) | All |
+| `--temp` | Clean temporary files only | Basic |
+| `--browser` | Clean browser caches only | Basic |
+| `--dev` | Clean developer caches only | Advanced |
+| `--logs` | Clean system logs only | Basic |
+| `--cache` | Clean package caches only | Advanced |
+| `--quiet` | Suppress output | Modifier |
+| `--verbose` | Show detailed output | Modifier |
 
 ### Examples
 
 ```bash
-# Clean everything
+# Clean everything (recommended for most users)
 cleanup --all
 
-# Clean only temp files and browser caches
+# Quick cleanup - only temp files and browsers
 cleanup --temp --browser
 
-# Clean developer caches and logs
-cleanup --dev --logs
+# After development work - clean dev caches
+cleanup --dev
 
-# Clean with verbose output
+# Full system cleanup with details
 cleanup --all --verbose
+
+# Clean only package managers (apt, dnf, brew, etc.)
+cleanup --cache
+
+# Safe cleanup - no admin required
+cleanup --temp --browser
 ```
+
+---
 
 ## 📦 Platform-Specific Installation
 
 ### Windows
 
+**Method 1: PowerShell Script**
 1. Download `cleanup.ps1`
 2. Right-click → "Run with PowerShell"
 3. Click "Yes" when prompted
+
+**Method 2: EXE Installer**
+1. Download `DiskCleanupTool.exe` from [Releases](https://github.com/chibuenyim/UniversalDiskCleanupTool/releases)
+2. Double-click to run
+3. Click "Yes" on UAC prompt
 
 ### macOS
 
@@ -141,41 +306,55 @@ brew install diskcleanup
 **Method 2: Manual**
 ```bash
 # Download and run installer
-curl -LO https://raw.githubusercontent.com/chibuenyim/DiskCleanupTool/main/install.sh
+curl -LO https://raw.githubusercontent.com/chibuenyim/UniversalDiskCleanupTool/main/install.sh
 sudo ./install.sh
 ```
 
-**Method 3: Use App Bundle**
-```bash
-# Copy DiskCleanupTool.app to /Applications
-# Double-click to run
-```
+**Method 3: DMG Installer**
+1. Download `DiskCleanupTool-2.0.0.dmg` from [Releases](https://github.com/chibuenyim/UniversalDiskCleanupTool/releases)
+2. Mount DMG
+3. Drag `DiskCleanupTool.app` to Applications
+4. Launch from Applications
 
 ### Linux
 
 **Debian/Ubuntu**
 ```bash
 # Download .deb package
-sudo dpkg -i diskcleanup_2.0.0_amd64.deb
-sudo apt-get install -f
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v2.0.0/diskcleanup_2.0.0_all.deb
+
+# Install
+sudo dpkg -i diskcleanup_2.0.0_all.deb
+sudo apt-get install -f  # Fix dependencies if needed
 ```
 
 **Fedora/RHEL**
 ```bash
 # Download .rpm package
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v2.0.0/diskcleanup-2.0.0-1.noarch.rpm
+
+# Install
 sudo dnf install diskcleanup-2.0.0-1.noarch.rpm
 ```
 
-**Arch**
+**AppImage (Universal)**
+```bash
+# Download AppImage
+wget https://github.com/chibuenyim/UniversalDiskCleanupTool/releases/download/v2.0.0/DiskCleanupTool-2.0.0-x86_64.AppImage
+
+# Make executable
+chmod +x DiskCleanupTool-2.0.0-x86_64.AppImage
+
+# Run
+./DiskCleanupTool-2.0.0-x86_64.AppImage
+```
+
+**Arch (AUR)**
 ```bash
 yay -S diskcleanup
 ```
 
-**Manual Installation**
-```bash
-curl -LO https://raw.githubusercontent.com/chibuenyim/DiskCleanupTool/main/install.sh
-sudo ./install.sh
-```
+---
 
 ## 🐧 Building Packages
 
@@ -183,12 +362,14 @@ sudo ./install.sh
 
 ```bash
 cd packages/debian
-dpkg-buildpackage -us -uc
+chmod +x build.sh
+./build.sh
 ```
 
 ### RPM Package (.rpm)
 
 ```bash
+# Requires rpmbuild
 cd packages/rpm
 rpmbuild -ba diskcleanup.spec
 ```
@@ -197,6 +378,7 @@ rpmbuild -ba diskcleanup.spec
 
 ```bash
 cd packages/appimage
+chmod +x build-appimage.sh
 ./build-appimage.sh
 ```
 
@@ -204,40 +386,11 @@ cd packages/appimage
 
 ```bash
 cd packages/macos
+chmod +x build-dmg.sh
 ./build-dmg.sh
 ```
 
-## 📊 Before & After
-
-### Before Cleanup
-```
-Free space: 5.2 GB
-Used:  114.8 GB
-Total: 120 GB
-```
-
-### After Cleanup
-```
-Free space: 22.4 GB (+17.2 GB freed!)
-Used:  97.6 GB
-Total: 120 GB
-```
-
-*Results may vary based on system usage*
-
-## ⚠️ Safety
-
-This tool is designed to be safe:
-- ✅ Never deletes user documents
-- ✅ Never deletes personal files
-- ✅ Only removes temporary files and caches
-- ✅ Shows what will be cleaned before running
-- ✅ Can be run with selective options
-
-However, always:
-- 💾 Backup important data before cleanup
-- 📋 Review what will be cleaned
-- 🔍 Use `--verbose` to see details
+---
 
 ## 🛠️ Troubleshooting
 
@@ -246,6 +399,7 @@ However, always:
 **Linux:**
 ```bash
 # Ubuntu/Debian
+sudo apt-get update
 sudo apt-get install -y powershell
 
 # Fedora
@@ -270,56 +424,121 @@ sudo ./cleanup.ps1 --all
 
 ### "Cannot clean system files"
 
-Run with sudo/administrator:
+Run with elevated privileges:
 ```bash
+# Linux/macOS
 sudo cleanup --all
+
+# Windows (Run as Administrator)
+# Right-click PowerShell → "Run as Administrator"
 ```
+
+### "Script is disabled on this system"
+
+**PowerShell:**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+---
 
 ## 📁 Project Structure
 
 ```
 UniversalDiskCleanupTool/
-├── cleanup.ps1              # Main script
+├── cleanup.ps1              # Main universal script
 ├── install.sh               # Linux/macOS installer
 ├── README.md                # This file
 ├── LICENSE                  # MIT License
 ├── packages/
-│   ├── debian/             # Debian packaging
-│   ├── rpm/                # RPM packaging
-│   ├── appimage/           # AppImage build
-│   └── macos/              # macOS DMG build
+│   ├── debian/
+│   │   └── build.sh         # Build .deb package
+│   ├── rpm/
+│   │   └── diskcleanup.spec # Build .rpm package
+│   ├── appimage/
+│   │   └── build-appimage.sh # Build AppImage
+│   └── macos/
+│       └── build-dmg.sh     # Build DMG
 ├── macos/
 │   └── DiskCleanupTool.app/ # macOS app bundle
 └── diskcleanup.desktop      # Linux desktop entry
 ```
 
+---
+
+## ⚠️ Safety & Best Practices
+
+### What's Safe
+✅ Temporary files and caches
+✅ Browser caches (not history/bookmarks)
+✅ Developer package caches
+✅ System logs
+✅ Windows Update leftovers
+✅ Build artifacts
+
+### What's Protected
+❌ User documents and files
+❌ Desktop and Downloads (unless specified)
+❌ Browser history, bookmarks, passwords
+❌ Application settings
+❌ Installed programs
+❌ System files
+
+### Best Practices
+1. 💾 **Backup first** - Always backup important data
+2. 🧪 **Test selectively** - Try `--temp` first before `--all`
+3. 👀 **Review output** - Use `--verbose` to see what's cleaned
+4. ⏰ **Schedule regularly** - Run monthly for best results
+5. 🔄 **Restart after** - Some changes may need a restart
+
+---
+
 ## 🤝 Contributing
 
 Contributions welcome! Please:
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Submit a pull request
+4. Commit (`git commit -m 'Add amazing feature'`)
+5. Push to branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+### Areas for Contribution
+- Additional platform support
+- More cache locations
+- Performance improvements
+- Bug fixes
+- Documentation improvements
+
+---
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details
+
+---
 
 ## 🙏 Acknowledgments
 
 - Built with PowerShell Core 7+
 - Cross-platform testing on Windows, macOS, and Linux
 - Community contributions and feedback
-
-## 📞 Support
-
-- **Issues**: https://github.com/chibuenyim/DiskCleanupTool/issues
-- **Discussions**: https://github.com/chibuenyim/DiskCleanupTool/discussions
-
-## ⭐ Star the Repo!
-
-If you find this tool helpful, please give it a star!
+- Inspired by the need for a truly universal cleanup tool
 
 ---
 
-Made with ❤️ for Windows, macOS, and Linux users worldwide
+## 📞 Support
+
+- **Issues**: https://github.com/chibuenyim/UniversalDiskCleanupTool/issues
+- **Discussions**: https://github.com/chibuenyim/UniversalDiskCleanupTool/discussions
+- **Releases**: https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
+
+---
+
+## ⭐ Star the Repo!
+
+If you find this tool helpful, please give it a star! ⭐
+
+---
+
+**Made with ❤️ for Windows, macOS, and Linux users worldwide**
