@@ -1302,7 +1302,52 @@ if (-not $Quiet) {
     Write-Host ""
 }
 
-# Load configuration
+# 
+# =============================================
+# SPACE ESTIMATION (Before Cleanup)
+# =============================================
+function Show-SpaceEstimation {
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host "  SPACE ESTIMATION" -ForegroundColor Cyan
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $estimates = @{
+        "Temporary Files" = if ($Temp -or $All) { 1500 * 1MB } else { 0 }
+        "Browser Caches" = if ($Browser -or $All) { 1150 * 1MB } else { 0 }
+        "Developer Tools" = if ($Dev -or $All) { 16500 * 1MB } else { 0 }
+        "System Files" = if ($System -or $All) { 5000 * 1MB } else { 0 }
+        "Package Caches" = if ($All) { 3000 * 1MB } else { 0 }
+        "Application Caches" = if ($All) { 3000 * 1MB } else { 0 }
+    }
+
+    $totalEstimate = 0
+    foreach ($item in $estimates.GetEnumerator()) {
+        if ($item.Value -gt 0) {
+            Write-Host "  $($item.Key):" -ForegroundColor White -NoNewline
+            Write-Host " $(Format-Bytes $item.Value)" -ForegroundColor Cyan
+            $totalEstimate += $item.Value
+        }
+    }
+
+    Write-Host ""
+    Write-Host "  Estimated space to be freed: " -NoNewline
+    Write-Host "$(Format-Bytes $totalEstimate)" -ForegroundColor Green -BackgroundColor DarkGray
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host ""
+}
+
+# Show estimation if not in quiet mode
+if (-not $Quiet) {
+    Show-SpaceEstimation
+    
+    Write-Host "Starting cleanup..." -ForegroundColor Yellow
+    Write-Host ""
+    Start-Sleep -Seconds 1
+}
+Load configuration
 Load-Config | Out-Null
 
 # Run OS-specific cleanup
@@ -1316,35 +1361,47 @@ switch ($OS) {
 $script:Config.TotalCleaned = $totalFreed
 Save-Config
 
+
 # Show results
 if (-not $Quiet) {
     if ($Interactive) { Write-Progress -Activity "Cleanup complete" -Completed }
 
     Write-Host ""
-    Write-Info "=== RESULTS ==="
-
-    if ($ScanOnly -and $script:Config.ScanResults.Count -gt 0) {
-        Write-Success "Scan results:"
-        foreach ($item in $script:Config.ScanResults.GetEnumerator()) {
-            Write-Host "  $($item.Key): $(Format-Bytes $item.Value)" -ForegroundColor Cyan
-        }
-        Write-Host ""
-        $totalScan = ($script:Config.ScanResults.Values | Measure-Object -Sum).Sum
-        Write-Success "Total that could be freed: $(Format-Bytes $totalScan)"
-    } elseif ($DryRun) {
-        Write-Success "Total that would be freed: $(Format-Bytes $totalFreed)"
-        Write-Info "Run without --DryRun to actually clean"
-    } else {
-        Write-Success "Total space freed: $(Format-Bytes $totalFreed)"
-
-        $drive = if ($OS -eq "Windows") { Get-PSDrive C } else { Get-PSDrive / }
-        $afterFree = $drive.Free
-        Write-Host "Free space after:  $(Format-Bytes $afterFree)" -ForegroundColor Gray
-        Write-Host "Actual freed:       $(Format-Bytes ($afterFree - $beforeFree))" -ForegroundColor Green
-    }
-
+    Write-Host "============================================" -ForegroundColor Green
+    Write-Host "  CLEANUP RESULTS" -ForegroundColor Green
+    Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Success "Cleanup complete!"
-    Write-Info "Log file: $($script:Config.LogFile)"
-    Write-Info "Config:   $($script:Config.ConfigPath)"
+
+    $drive = if ($OS -eq "Windows") { Get-PSDrive C } else { Get-PSDrive / }
+    $afterFree = $drive.Free
+    $actualFreed = $afterFree - $beforeFree
+
+    Write-Host "  Before cleanup:  " -NoNewline
+    Write-Host "$(Format-Bytes $beforeFree)" -ForegroundColor Gray
+    Write-Host ""
+    
+    Write-Host "  After cleanup:   " -NoNewline
+    Write-Host "$(Format-Bytes $afterFree)" -ForegroundColor Gray
+    Write-Host ""
+    
+    Write-Host "  " -NoNewline
+    Write-Host "============================================" -ForegroundColor Gray
+    Write-Host ""
+    
+    Write-Host "  SPACE FREED: " -NoNewline
+    Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor Green -BackgroundColor DarkGray
+    Write-Host ""
+    
+    if ($totalFreed -gt 0) {
+        Write-Host "  Files cleaned:   " -NoNewline
+        Write-Host "$(Format-Bytes $totalFreed)" -ForegroundColor Cyan
+    }
+    
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  Cleanup complete!" -ForegroundColor Green -BackgroundColor DarkGray
+    Write-Host ""
+    Write-Host "  Log file: $($script:Config.LogFile)" -ForegroundColor Gray
+    Write-Host ""
 }
