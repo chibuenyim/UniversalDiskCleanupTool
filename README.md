@@ -1,13 +1,52 @@
 # 🧹 Universal Disk Cleanup Tool
 
-**A cross-platform disk cleanup utility for Windows, macOS, and Linux**
+**A cross-platform disk cleanup utility for Windows, macOS, and Linux with enhanced support**
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)
 
-## ✨ Features
+---
+
+## 📖 About
+
+**Universal Disk Cleanup Tool** is a powerful, cross-platform disk cleanup utility designed to free up valuable disk space by removing temporary files, caches, logs, and other junk that accumulates over time.
+
+Built with PowerShell Core 7+, it provides comprehensive cleaning capabilities across all major operating systems:
+
+- **Windows 10/11** - Full cleanup of Windows-specific locations (temp files, browser caches, developer tools, Windows Update residues, system files, and more)
+- **macOS 10.14+** - Enhanced cleanup for Apple systems (Safari, Xcode, Homebrew, CocoaPods, Time Machine detection, iOS backup warnings)
+- **Linux** - Universal support for all major distributions (Ubuntu, Fedora, Arch, Debian, openSUSE, and more with 10+ package manager support)
+
+### What Makes It Different?
+
+Unlike traditional cleanup tools that only scratch the surface, Universal Disk Cleanup Tool goes deep:
+
+- **60+ cache locations** covering browsers, development tools, applications, and system files
+- **15+ package managers** including npm, yarn, pip, Homebrew, apt, dnf, pacman, and more
+- **20+ developer tools** from Docker to Go, from Gradle to Maven
+- **Safe by default** - Only removes junk, never your personal files or projects
+- **Selective cleaning** - Choose exactly what to clean with granular options
+- **Cross-platform consistency** - Same experience across Windows, macOS, and Linux
+
+### Who Is It For?
+
+- **Developers** - Clean up npm, yarn, pip, Docker, and other development caches (saves 10-20 GB)
+- **Designers** - Remove Adobe CC cache, thumbnails, and application junk (saves 5-15 GB)
+- **Power Users** - Comprehensive system cleanup for maximum space recovery (saves 15-35 GB)
+- **IT Professionals** - Maintain systems and free up disk space across platforms
+- **Anyone** running out of disk space on Windows, macOS, or Linux
+
+### Expected Results
+
+- **Basic users**: 2-5 GB freed
+- **Web browsing**: 3-8 GB freed
+- **Developers**: 10-25 GB freed
+- **Designers/creators**: 8-20 GB freed
+- **Power users**: 15-35 GB freed
+
+---
 
 - 🌍 **Cross-Platform** - Works on Windows, macOS, and Linux
 - 🧹 **Comprehensive Cleaning** - Removes temp files, caches, logs, and more
@@ -15,6 +54,23 @@
 - 🔒 **Safe** - Only removes junk files, never your personal data
 - 🎯 **Selective** - Choose what to clean with command-line options
 - 📦 **Portable** - No installation required (optional install available)
+
+### 🆕 v3.0 Enhancements
+
+#### 🍎 macOS Improvements
+- **7 browser support** (Safari, Chrome, Firefox, Brave, Edge, Opera, Vivaldi)
+- **15+ developer tools** (npm, yarn, pip, Poetry, Homebrew, CocoaPods, Carthage, Swift PM, Go, Cargo, Gradle, Maven, Docker)
+- **9 application caches** (Adobe CC, Spotify, Discord, Slack, Teams, Zoom, Telegram, VSCode, JetBrains)
+- **Enhanced system cleanup** (font cache, thumbnails, Time Machine snapshot detection, iOS backup warnings)
+- **Package managers** (Homebrew, MacPorts)
+
+#### 🐧 Linux Improvements
+- **10+ package managers** (apt, dnf, yum, pacman, zypper, swupd, xbps, apk, snap, flatpak)
+- **7 browser support** (Chrome, Firefox, Brave, Chromium, Edge, Opera, Vivaldi)
+- **15+ developer tools** (npm, yarn, pnpm, pip, Poetry, Composer, Go, Cargo, Gradle, Maven, Docker)
+- **8 application caches** (Spotify, Discord, Slack, Teams, Zoom, Telegram, VSCode, JetBrains)
+- **Enhanced system cleanup** (journalctl logs, thumbnails, font cache, icon cache)
+- **Better distribution support** (Ubuntu/Debian, Fedora/RHEL, Arch, openSUSE, Clear Linux, Void, Alpine)
 
 ---
 
