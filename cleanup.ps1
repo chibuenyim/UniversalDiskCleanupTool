@@ -1296,6 +1296,39 @@ if (-not $Quiet) {
     Write-Host ""
 
     # Show disk space before
+
+    # Force filesystem sync to ensure space is actually freed
+    Write-Host "Forcing filesystem sync..." -ForegroundColor Yellow
+    if ($OS -eq "Windows") {
+        # On Windows, force garbage collection and flush file handles
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
+        [System.GC]::Collect()
+
+        # Try to flush volume
+        try {
+            $volume = (Get-PSDrive C).ProviderPath
+            $fsutil = "$env:SystemRoot\System32\fsutil.exe"
+            if (Test-Path $fsutil) {
+                & $fsutil volume diskfree C: | Out-Null
+            }
+        } catch {
+            # Ignore errors
+        }
+
+        # Wait a bit for Windows to update disk counters
+        Write-Host "Waiting for disk counters to update..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+    } else {
+        # On Unix, use sync command
+        try {
+            sync | Out-Null
+            Start-Sleep -Seconds 2
+        } catch {
+            # Ignore errors
+        }
+    }
+
     $drive = if ($OS -eq "Windows") { Get-PSDrive C } else { Get-PSDrive / }
     $beforeFree = $drive.Free
     Write-Host "Free space before: $(Format-Bytes $beforeFree)" -ForegroundColor Gray
@@ -1347,7 +1380,7 @@ if (-not $Quiet) {
     Write-Host ""
     Start-Sleep -Seconds 1
 }
-Load configuration
+# Load configuration
 Load-Config | Out-Null
 
 # Run OS-specific cleanup
@@ -1372,9 +1405,44 @@ if (-not $Quiet) {
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
 
+    # Force filesystem sync to ensure space is actually freed
+    Write-Host "Forcing filesystem sync..." -ForegroundColor Yellow
+    if ($OS -eq "Windows") {
+        # On Windows, force garbage collection and flush file handles
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
+        [System.GC]::Collect()
+
+        # Try to flush volume
+        try {
+            $fsutil = "$env:SystemRoot\System32\fsutil.exe"
+            if (Test-Path $fsutil) {
+                & $fsutil volume diskfree C: | Out-Null
+            }
+        } catch {
+            # Ignore errors
+        }
+
+        # Wait a bit for Windows to update disk counters
+        Write-Host "Waiting for disk counters to update..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+    } else {
+        # On Unix, use sync command
+        try {
+            sync | Out-Null
+            Start-Sleep -Seconds 2
+        } catch {
+            # Ignore errors
+        }
+    }
+
     $drive = if ($OS -eq "Windows") { Get-PSDrive C } else { Get-PSDrive / }
     $afterFree = $drive.Free
     $actualFreed = $afterFree - $beforeFree
+
+    # Set environment variable for launcher to read
+    $env:DISK_CLEANUP_FREED = $actualFreed
+
 
     Write-Host "  Before cleanup:  " -NoNewline
     Write-Host "$(Format-Bytes $beforeFree)" -ForegroundColor Gray
@@ -1392,7 +1460,7 @@ if (-not $Quiet) {
     Write-Host "  ╔════════════════════════════════════════╗" -ForegroundColor Green
     Write-Host "  ║                                      ║" -ForegroundColor Green
     Write-Host "  ║" -NoNewline -ForegroundColor Green
-    Write-Host "   SPACE FREED: " -NoNewline
+    Write-Host "   Disk space change: " -NoNewline
     Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor White -BackgroundColor Green
     Write-Host "   " -NoNewline -ForegroundColor Green
     Write-Host "║" -ForegroundColor Green
@@ -1401,7 +1469,6 @@ if (-not $Quiet) {
     Write-Host ""
     
     if ($totalFreed -gt 0) {
-        Write-Host "  Files cleaned:   " -NoNewline
         Write-Host "$(Format-Bytes $totalFreed)" -ForegroundColor Cyan
     }
     
@@ -1416,13 +1483,15 @@ if (-not $Quiet) {
     Write-Host "         The actual space has been freed, but the OS" -ForegroundColor Yellow
     Write-Host "         may delay updating the display counter." -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  Files deleted:    $(Format-Bytes $totalFreed)" -ForegroundColor Cyan
     Write-Host ""
+    # Only show "Press Enter" if running from CLI, not from GUI launcher
+    if (-not $env:DISK_CLEANUP_FROM_GUI) {
     Write-Host "  Press Enter to exit..." -ForegroundColor Yellow
     Write-Host ""
     
     # Wait for user confirmation
-    $null = Read-Host
+        $null = Read-Host
+    }
     Write-Host "  Log file: $($script:Config.LogFile)" -ForegroundColor Gray
     Write-Host ""
 }

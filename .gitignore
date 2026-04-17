@@ -10,6 +10,13 @@ dist/
 *.exe
 *.msi
 
+# Release artifacts (built by GitHub Actions)
+release-staging/
+*.tar.gz
+*.zip
+UniversalDiskCleanupTool-*.tar.gz
+UniversalDiskCleanupTool-*.zip
+
 # IDE files
 .vscode/
 .idea/

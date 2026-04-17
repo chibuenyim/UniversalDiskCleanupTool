@@ -1,0 +1,222 @@
+name: Multi-OS Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v5.2.4)'
+        required: true
+        default: 'v5.2.4'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            os_name: linux
+            asset_name: UniversalDiskCleanupTool-linux
+            asset_extension: tar.gz
+          - os: windows-latest
+            os_name: windows
+            asset_name: UniversalDiskCleanupTool-windows
+            asset_extension: zip
+          - os: macos-latest
+            os_name: macos
+            asset_name: UniversalDiskCleanupTool-macos
+            asset_extension: tar.gz
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+        shell: bash
+
+      - name: Install PowerShell (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Verify PowerShell installation
+        run: pwsh --version
+
+      - name: Create staging directory
+        run: mkdir -p release-staging
+
+      - name: Copy core files (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cp START.bat release-staging/
+          cp launcher.ps1 release-staging/
+          cp install-pwsh.ps1 release-staging/
+          cp cleanup.ps1 release-staging/
+          cp README.txt release-staging/
+          cp LICENSE release-staging/
+
+      - name: Copy core files (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cp start.sh release-staging/
+          cp start-gui.sh release-staging/
+          cp cleanup.ps1 release-staging/
+          cp README.txt release-staging/ || echo "README.txt not found, skipping"
+          cp LICENSE release-staging/
+
+      - name: Create Windows ZIP
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd release-staging
+          7z a ../${{ matrix.asset_name }}-${{ steps.version.outputs.version }}.zip *
+
+      - name: Create Unix tarball
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd release-staging
+          chmod +x *.sh
+          tar -czf ../${{ matrix.asset_name }}-${{ steps.version.outputs.version }}.tar.gz *
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}-${{ steps.version.outputs.version }}
+          path: ${{ matrix.asset_name }}-${{ steps.version.outputs.version }}.${{ matrix.asset_extension }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+        shell: bash
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create Release Notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Universal Disk Cleanup Tool ${{ steps.version.outputs.version }}
+
+          ### 🚀 Features
+          - **Cross-Platform Support** - Works on Windows, macOS, and Linux
+          - **Beautiful GUI** - Windows users get a graphical interface
+          - **Automatic PowerShell Installation** - Installs PowerShell 7+ if missing
+          - **Safe & Fast** - Frees up to 45 GB of space safely
+
+          ### 📦 Downloads
+
+          Choose the file for your operating system:
+
+          - **Windows**: Download the `.zip` file
+            - Extract the ZIP
+            - Double-click `START.bat`
+            - If PowerShell 7+ is missing, we'll install it automatically
+            - A beautiful GUI will open
+
+          - **macOS**: Download the `-macos.tar.gz` file
+            ```bash
+            tar -xzf UniversalDiskCleanupTool-macos-${{ steps.version.outputs.version }}.tar.gz
+            cd UniversalDiskCleanupTool-macos-${{ steps.version.outputs.version }}
+            chmod +x start.sh
+            ./start.sh
+            ```
+
+          - **Linux**: Download the `-linux.tar.gz` file
+            ```bash
+            tar -xzf UniversalDiskCleanupTool-linux-${{ steps.version.outputs.version }}.tar.gz
+            cd UniversalDiskCleanupTool-linux-${{ steps.version.outputs.version }}
+            chmod +x start.sh
+            ./start.sh
+            ```
+
+          ### 📋 Requirements
+
+          - **Windows**: Windows 10/11 (PowerShell 7+ auto-installed if missing)
+          - **macOS**: macOS 10.14+ (PowerShell 7+ required - install via `brew install powershell`)
+          - **Linux**: Any major distribution (PowerShell 7+ required)
+
+          ### 💡 Quick Start
+
+          **Windows:**
+          1. Download and extract ZIP
+          2. Double-click `START.bat`
+          3. Follow the GUI prompts
+
+          **macOS/Linux:**
+          ```bash
+          ./start.sh --FixAll  # Clean everything (recommended)
+          ./start.sh --Quick   # Quick cleanup
+          ```
+
+          ### 🛡️ Safety
+
+          This tool only cleans:
+          - ✅ Temporary files
+          - ✅ Cache files
+          - ✅ Package downloads
+          - ✅ Build artifacts
+          - ✅ System logs
+
+          It NEVER touches:
+          - ❌ Your documents
+          - ❌ Your photos/videos
+          - ❌ Your source code
+          - ❌ Your settings
+
+          For more information, visit: https://github.com/chibuenyim/UniversalDiskCleanupTool
+          EOF
+          cat release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Universal Disk Cleanup Tool ${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/*/*.zip
+            artifacts/*/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

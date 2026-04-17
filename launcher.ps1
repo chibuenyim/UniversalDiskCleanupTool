@@ -338,30 +338,25 @@ function Show-MainForm {
                 $argsList += "--$sel"
             }
 
-            # Run cleanup and capture output
+            # Run cleanup with real-time output (don't capture, let it stream)
             Write-Host "Starting cleanup..." -ForegroundColor Green
             Write-Host ""
 
-            $output = & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/cleanup.ps1" @argsList 2>&1
+            # Set environment variable to let cleanup.ps1 know it's running from GUI
+            $env:DISK_CLEANUP_FROM_GUI = "1"
 
-            # Try to parse space freed from output
-            $spaceFreed = 0
-            foreach ($line in $output) {
-                if ($line -match "(\d+(?:\.\d+)?)\s*(GB|MB|KB)\s+freed") {
-                    $value = [double]$Matches[1]
-                    $unit = $Matches[2]
+            # Run cleanup and let output stream to console in real-time
+            & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/cleanup.ps1" @argsList
 
-                    switch ($unit) {
-                        "GB" { $spaceFreed = $value * 1GB }
-                        "MB" { $spaceFreed = $value * 1MB }
-                        "KB" { $spaceFreed = $value * 1KB }
-                    }
-                    break
-                }
-            }
+            # Remove the environment variable
+            Remove-Item Env:DISK_CLEANUP_FROM_GUI -ErrorAction SilentlyContinue
 
-            # If we couldn't parse it, use estimation
-            if ($spaceFreed -eq 0) {
+            # Try to get space freed from environment variable set by cleanup.ps1
+            $spaceFreed = $env:DISK_CLEANUP_FREED
+            if ($spaceFreed) {
+                $spaceFreed = [long]$spaceFreed
+            } else {
+                # Fallback to estimation
                 $spaceFreed = $estimatedMB * 1MB
             }
 

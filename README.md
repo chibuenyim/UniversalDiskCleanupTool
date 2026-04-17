@@ -10,8 +10,16 @@
 
 ## 🚀 Quick Start
 
+### 📥 Download from Releases
+
+Go to [https://github.com/chibuenyim/UniversalDiskCleanupTool/releases](https://github.com/chibuenyim/UniversalDiskCleanupTool/releases) and download the file for your operating system:
+
+- **Windows**: `UniversalDiskCleanupTool-windows-vX.X.X.zip`
+- **macOS**: `UniversalDiskCleanupTool-macos-vX.X.X.tar.gz`
+- **Linux**: `UniversalDiskCleanupTool-linux-vX.X.X.tar.gz`
+
 ### Windows:
-1. Download from: https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
+1. Download the `.zip` file from releases
 2. Extract ZIP
 3. **Double-click `START.bat`**
 4. If PowerShell 7+ is missing, we will install it automatically for you!
@@ -21,6 +29,10 @@
 ```bash
 # Install PowerShell
 brew install powershell
+
+# Download and extract the release
+tar -xzf UniversalDiskCleanupTool-macos-vX.X.X.tar.gz
+cd UniversalDiskCleanupTool-macos-vX.X.X
 
 # Download and run
 chmod +x start.sh
@@ -38,6 +50,10 @@ sudo dpkg -i packages-microsoft-prod.deb
 sudo apt-get update
 sudo apt-get install -y powershell
 
+# Download and extract the release
+tar -xzf UniversalDiskCleanupTool-linux-vX.X.X.tar.gz
+cd UniversalDiskCleanupTool-linux-vX.X.X
+
 # Download and run this tool
 chmod +x start.sh
 ./start.sh
@@ -51,6 +67,10 @@ sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
 # Install PowerShell
 sudo dnf install -y powershell
 
+# Download and extract
+tar -xzf UniversalDiskCleanupTool-linux-vX.X.X.tar.gz
+cd UniversalDiskCleanupTool-linux-vX.X.X
+
 # Download and run
 chmod +x start.sh
 ./start.sh
@@ -60,6 +80,10 @@ chmod +x start.sh
 ```bash
 # Install from AUR
 yay -S powershell
+
+# Download and extract
+tar -xzf UniversalDiskCleanupTool-linux-vX.X.X.tar.gz
+cd UniversalDiskCleanupTool-linux-vX.X.X
 
 # Download and run
 chmod +x start.sh
@@ -181,8 +205,39 @@ Freed:   30 GB
 ## 🔗 Links
 
 - **Website:** https://github.com/chibuenyim/UniversalDiskCleanupTool
-- **Download:** https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
-- **Support:** https://github.com/chibuenyim/UniversalDiskCleanupTool/issues
+- **Releases:** https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
+- **Issues:** https://github.com/chibuenyim/UniversalDiskCleanupTool/issues
+
+---
+
+## 📦 Automated Multi-OS Releases
+
+This project uses GitHub Actions to automatically build releases for all platforms:
+
+- **Windows** - `.zip` file with GUI launcher
+- **macOS** - `.tar.gz` file with Unix launcher
+- **Linux** - `.tar.gz` file with Unix launcher
+
+When you push a version tag (like `v5.2.4`) or trigger a release from the Actions tab, the workflow automatically:
+
+1. Builds release artifacts for all platforms
+2. Tests PowerShell compatibility
+3. Creates a GitHub release with platform-specific downloads
+4. Generates detailed release notes
+
+### Creating a New Release
+
+To create a new release:
+
+```bash
+# Tag and push (triggers automated release)
+git tag v5.2.4
+git push origin v5.2.4
+```
+
+Or manually trigger from GitHub Actions → Release workflow → Run workflow.
+
+---
 
 ---
 
