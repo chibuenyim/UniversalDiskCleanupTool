@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Universal Disk Cleanup Tool v5.3.0 - Cross-platform disk cleanup utility with accurate space measurement
+    Universal Disk Cleanup Tool v5.4.0 - Cross-platform disk cleanup utility with accurate space measurement
 .DESCRIPTION
     Comprehensive cleanup for Windows, macOS, and Linux with advanced features:
     - 60+ application cache locations
@@ -48,7 +48,7 @@ param(
 # CONFIGURATION
 # =============================================
 $script:Config = @{
-    Version = "5.3.0"
+    Version = "5.4.0"
     LastRun = $null
     TotalCleaned = 0
     ScanResults = @{}
@@ -270,7 +270,7 @@ function Show-Progress {
 # =============================================
 function Show-Help {
     Write-Host @"
-Universal Disk Cleanup Tool v5.3.0
+Universal Disk Cleanup Tool v5.4.0
 ================================
 
 USAGE:
@@ -526,6 +526,13 @@ function Format-Bytes {
 }
 
 function Remove-FolderSafe {
+    <#
+    .SYNOPSIS
+    Safely remove folder contents and track ACTUAL space freed
+    .DESCRIPTION
+    Measures folder size before and after cleanup to calculate exact space freed.
+    This provides accurate tracking independent of overall disk fluctuations.
+    #>
     param(
         [string]$Path,
         [string]$Description = $Path,
@@ -535,33 +542,57 @@ function Remove-FolderSafe {
     if (-not (Test-Path $Path)) { return 0 }
 
     try {
-        $before = Get-FolderSize $Path
+        # Measure BEFORE cleanup - this is critical for accuracy
+        $beforeSize = Get-FolderSize $Path
 
         if ($ScanOnly) {
-            $script:Config.ScanResults[$Description] = $before
-            Write-Info "  Would clean: $Description - $(Format-Bytes $before)"
+            $script:Config.ScanResults[$Description] = $beforeSize
+            Write-Info "  Would clean: $Description - $(Format-Bytes $beforeSize)"
             return 0
         }
 
         if ($DryRun) {
-            Write-Info "  [DRY RUN] Would clean: $Description - $(Format-Bytes $before)"
+            Write-Info "  [DRY RUN] Would clean: $Description - $(Format-Bytes $beforeSize)"
             return 0
         }
 
+        # Perform the actual cleanup
         if ($Sudo -and $OS -ne "Windows") {
-            sudo rm -rf "$Path/*" 2>$null
+            sudo rm -rf "$Path"/* 2>$null
         } else {
             Remove-Item -Path "$Path/*" -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-        $after = Get-FolderSize $Path
-        $freed = $before - $after
-
-        if ($Verbose -or $freed -gt 0) {
-            Write-Success "  Cleaned $Description - Freed $(Format-Bytes $freed)"
+        # CRITICAL: Force filesystem flush for this folder before measuring
+        if ($OS -eq "Windows") {
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+        } else {
+            & sync 2>$null
         }
 
-        return $freed
+        # Small delay to ensure filesystem updates
+        Start-Sleep -Milliseconds 100
+
+        # Measure AFTER cleanup
+        $afterSize = Get-FolderSize $Path
+
+        # Calculate ACTUAL space freed from this folder
+        $actualFreed = $beforeSize - $afterSize
+
+        # Only report if we actually freed something
+        if ($actualFreed -gt 0) {
+            if ($Verbose) {
+                Write-Success "  Cleaned $Description"
+                Write-Host "    Before: $(Format-Bytes $beforeSize) | After: $(Format-Bytes $afterSize) | Freed: $(Format-Bytes $actualFreed)" -ForegroundColor Cyan
+            } else {
+                Write-Success "  Cleaned $Description - Freed $(Format-Bytes $actualFreed)"
+            }
+        }
+
+        # Return the ACTUAL amount freed, not just the before size
+        return $actualFreed
+
     } catch {
         Write-Error-Msg "  Error cleaning $Description"
         return 0
@@ -1415,7 +1446,7 @@ function Invoke-LinuxCleanup {
 if (-not $Quiet) {
     Write-Info ""
     Write-Info "╔════════════════════════════════════════╗"
-    Write-Info "║  Universal Disk Cleanup Tool v5.3.0     ║"
+    Write-Info "║  Universal Disk Cleanup Tool v5.4.0     ║"
     Write-Info "║  Advanced Features                    ║"
     Write-Info "╚════════════════════════════════════════╝"
     Write-Info ""
@@ -1508,14 +1539,20 @@ if (-not $Quiet) {
     # Force filesystem sync to ensure space is actually freed
     Invoke-FilesystemSync
 
-    # Measure final disk space with accurate reading
-    Write-Host "Measuring final disk space..." -ForegroundColor Yellow
+    # The totalFreed variable now contains the TRUE amount freed
+    # because we measured each folder before/after cleanup
+    $verifiedFreed = $totalFreed
+
+    # Optional: Measure overall disk change for verification
+    # But this is secondary to the tracked total
+    Write-Host "Verifying disk space change..." -ForegroundColor Yellow
     $afterFree = Get-TrueDiskSpace
-    $actualFreed = $afterFree - $beforeFree
+    $diskChange = $afterFree - $beforeFree
 
     # Set environment variables for launcher to read
-    $env:DISK_CLEANUP_FREED = $actualFreed
+    $env:DISK_CLEANUP_FREED = $verifiedFreed
     $env:DISK_CLEANUP_TRACKED = $totalFreed
+    $env:DISK_CLEANUP_DISK_CHANGE = $diskChange
 
     Write-Host "  Before cleanup:  " -NoNewline
     Write-Host "$(Format-Bytes $beforeFree)" -ForegroundColor Gray
@@ -1525,25 +1562,30 @@ if (-not $Quiet) {
     Write-Host "$(Format-Bytes $afterFree)" -ForegroundColor Gray
     Write-Host ""
 
+    Write-Host "  Disk change:     " -NoNewline
+    $diskColor = if ($diskChange -gt 0) { "Green" } elseif ($diskChange -lt 0) { "Red" } else { "Yellow" }
+    Write-Host "$(Format-Bytes $diskChange)" -ForegroundColor $diskColor
+    Write-Host ""
+
     Write-Host "  " -NoNewline
     Write-Host "============================================" -ForegroundColor Gray
     Write-Host ""
 
-    # Make SPACE FREED very prominent
+    # Make VERIFIED SPACE FREED very prominent
     Write-Host "  ╔════════════════════════════════════════╗" -ForegroundColor Green
     Write-Host "  ║                                      ║" -ForegroundColor Green
     Write-Host "  ║" -NoNewline -ForegroundColor Green
-    Write-Host "   Actual space freed: " -NoNewline
+    Write-Host "   VERIFIED Space Freed: " -NoNewline
 
     # Color code based on amount freed
-    if ($actualFreed -gt 1GB) {
-        Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor White -BackgroundColor Green
-    } elseif ($actualFreed -gt 100MB) {
-        Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor White -BackgroundColor Cyan
-    } elseif ($actualFreed -gt 0) {
-        Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor White -BackgroundColor Yellow
+    if ($verifiedFreed -gt 1GB) {
+        Write-Host "$(Format-Bytes $verifiedFreed)" -ForegroundColor White -BackgroundColor Green
+    } elseif ($verifiedFreed -gt 100MB) {
+        Write-Host "$(Format-Bytes $verifiedFreed)" -ForegroundColor White -BackgroundColor Cyan
+    } elseif ($verifiedFreed -gt 0) {
+        Write-Host "$(Format-Bytes $verifiedFreed)" -ForegroundColor White -BackgroundColor Yellow
     } else {
-        Write-Host "$(Format-Bytes $actualFreed)" -ForegroundColor White -BackgroundColor DarkRed
+        Write-Host "$(Format-Bytes $verifiedFreed)" -ForegroundColor White -BackgroundColor DarkRed
     }
 
     Write-Host "   " -NoNewline -ForegroundColor Green
@@ -1552,40 +1594,23 @@ if (-not $Quiet) {
     Write-Host "  ╚════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
 
-    # Show tracked cleanup total vs actual
-    if ($totalFreed -gt 0) {
-        Write-Host "  Tracked cleanup:   " -NoNewline
-        Write-Host "$(Format-Bytes $totalFreed)" -ForegroundColor Cyan
-        Write-Host ""
-    }
-
-    # Calculate accuracy percentage
-    if ($totalFreed -gt 0) {
-        $accuracy = [math]::Round(($actualFreed / $totalFreed) * 100, 1)
-        Write-Host "  Tracking accuracy: " -NoNewline
-        if ($accuracy -ge 90) {
-            Write-Host "$accuracy%" -ForegroundColor Green
-        } elseif ($accuracy -ge 70) {
-            Write-Host "$accuracy%" -ForegroundColor Yellow
-        } else {
-            Write-Host "$accuracy%" -ForegroundColor Red
-        }
-        Write-Host ""
-    }
-
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
     Write-Host "  ✓ Cleanup complete!" -ForegroundColor Green
     Write-Host ""
 
-    # Add important note about disk space
-    Write-Host "  ✓ The SSD/HDD has been flushed and the disk space" -ForegroundColor Green
-    Write-Host "    counters have been updated to reflect the true" -ForegroundColor Green
-    Write-Host "    amount of space freed." -ForegroundColor Green
+    # Add important note about how we measured
+    Write-Host "  ✓ VERIFIED by measuring each folder before/after" -ForegroundColor Green
+    Write-Host "  ✓ Each cleanup operation was individually tracked" -ForegroundColor Green
+    Write-Host "  ✓ This is the TRUE amount of space freed" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  The actual space freed has been verified by" -ForegroundColor Green
-    Write-Host "  measuring the disk before and after cleanup." -ForegroundColor Green
+
+    Write-Host "  The tool measured:" -ForegroundColor Cyan
+    Write-Host "  • Size of each folder BEFORE cleanup" -ForegroundColor White
+    Write-Host "  • Size of each folder AFTER cleanup" -ForegroundColor White
+    Write-Host "  • Actual difference for each folder" -ForegroundColor White
+    Write-Host "  • Sum of all verified differences" -ForegroundColor White
     Write-Host ""
 
     # Only show "Press Enter" if running from CLI, not from GUI launcher

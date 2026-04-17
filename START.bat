@@ -1,17 +1,17 @@
 @echo off
 REM ============================================
-REM  Universal Disk Cleanup Tool v5.3.0
+REM  Universal Disk Cleanup Tool v5.4.0
 REM  For Windows - GUI Launcher with Auto-Install
 REM ============================================
 
-title Universal Disk Cleanup Tool v5.3.0
+title Universal Disk Cleanup Tool v5.4.0
 
 set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
 echo.
 echo ============================================
-echo    Universal Disk Cleanup Tool v5.3.0
+echo    Universal Disk Cleanup Tool v5.4.0
 echo ============================================
 echo.
 echo Script directory: %SCRIPT_DIR%

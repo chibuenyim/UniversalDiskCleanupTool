@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Universal Disk Cleanup Tool v5.3.0 - GUI Launcher
+    Universal Disk Cleanup Tool v5.4.0 - GUI Launcher
 .DESCRIPTION
     Beautiful GUI launcher with space estimation and multiple selection
 #>
@@ -270,7 +270,7 @@ function Show-CompletionDialog {
 function Show-MainForm {
     # Create main form
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Universal Disk Cleanup Tool v5.3.0"
+    $form.Text = "Universal Disk Cleanup Tool v5.4.0"
     $form.Size = New-Object System.Drawing.Size(550, 520)
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
