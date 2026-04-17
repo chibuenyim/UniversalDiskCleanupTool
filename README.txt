@@ -1,10 +1,11 @@
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║         🧹 UNIVERSAL DISK CLEANUP TOOL v5.0                ║
-║         ===============================                      ║
+║         🧹 UNIVERSAL DISK CLEANUP TOOL v5.3.0              ║
+║         ================================                       ║
 ║                                                              ║
 ║         For Windows, macOS, and Linux                       ║
 ║         Free up to 45 GB of disk space!                    ║
+║         Now with ACCURATE space measurement!               ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -142,15 +143,26 @@ Website: https://github.com/chibuenyim/UniversalDiskCleanupTool
 Issues:  https://github.com/chibuenyim/UniversalDiskCleanupTool/issues
 
 
-VERSION 5.0.0
+VERSION 5.3.0
 ═════════════
 
+✓ ACCURATE space measurement with filesystem verification
+✓ TRUE disk space tracking - measures before/after cleanup
+✓ SSD/HDD flush to verify space is actually freed
+✓ Shows tracking accuracy percentage
 ✓ Cross-platform (Windows, macOS, Linux)
 ✓ Cleaner interface
 ✓ Faster cleanup
 ✓ Better progress tracking
 ✓ More safety features
 ✓ Easier than ever
+
+NEW IN v5.3.0:
+• Honest, accurate results that reflect true SSD/HDD state
+• Platform-specific tools (fsutil on Windows, sync on Unix)
+• Color-coded output based on amount freed
+• Enhanced GUI with accuracy details
+• Verified results confirm disk counters are updated
 
 
 Thank you for using Universal Disk Cleanup Tool! 🎉

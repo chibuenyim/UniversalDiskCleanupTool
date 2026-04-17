@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-#  Universal Disk Cleanup Tool v5.1
+#  Universal Disk Cleanup Tool v5.3.0
 #  GUI Launcher for macOS/Linux using Zenity
 # ============================================
 
@@ -61,7 +61,7 @@ fi
 
 # Main GUI dialog
 cleanup_choice=$(zenity --list \
-    --title="Universal Disk Cleanup Tool v5.1" \
+    --title="Universal Disk Cleanup Tool v5.3.0" \
     --text="Choose what to clean:" \
     --column="Option" \
     --column="Description" \

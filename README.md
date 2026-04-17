@@ -1,8 +1,8 @@
-# 🧹 Universal Disk Cleanup Tool v5.0
+# 🧹 Universal Disk Cleanup Tool v5.3.0
 
 **The easiest way to free up disk space on Windows, macOS, and Linux**
 
-![Version](https://img.shields.io/badge/version-5.2.3-blue.svg)
+![Version](https://img.shields.io/badge/version-5.3.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -94,14 +94,16 @@ chmod +x start.sh
 
 ## ✨ Features
 
-- **Beautiful GUI** - Windows users get a graphical interface (NEW!)
+- **Accurate Space Measurement** - Verifies TRUE disk space freed with filesystem sync (NEW!)
+- **Beautiful GUI** - Windows users get a graphical interface
 - **Cross-Platform** - Works on Windows, macOS, and Linux
 - **Easy to Use** - Simple launcher for each platform
 - **Safe** - Never deletes your documents or personal files
 - **Fast** - Cleans in minutes, not hours
 - **Powerful** - Frees up to 45 GB of space
 - **Smart** - Knows exactly what to clean
-- **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing (NEW!)
+- **Verified Results** - Shows tracking accuracy and actual space freed
+- **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing
 
 ---
 
@@ -241,16 +243,25 @@ Or manually trigger from GitHub Actions → Release workflow → Run workflow.
 
 ---
 
-## 🌟 What's New in v5.0
+## 🌟 What's New in v5.3.0
 
-- ✅ **Beautiful GUI** - Windows users now get a graphical interface!
-- ✅ **Auto-Install** - Automatically installs PowerShell 7+ on Windows if missing!
-- ✅ **Windows Support** - Now works on Windows too!
-- ✅ **Cleaner interface** - Simplified for all platforms
-- ✅ **Faster cleanup** - Optimized performance
-- ✅ **Better progress tracking** - See what's happening
-- ✅ **More safety features** - Won't delete your files
-- ✅ **Easier than ever** - Just run and go
+### Accurate Space Measurement
+- ✅ **TRUE Disk Space Tracking** - Measures actual disk space before and after cleanup
+- ✅ **Filesystem Verification** - Forces SSD/HDD flush to verify space is actually freed
+- ✅ **Accuracy Metrics** - Shows tracking accuracy percentage
+- ✅ **Platform-Specific Tools** - Uses `fsutil` on Windows, `sync` on Unix/macOS
+- ✅ **Verified Results** - Confirms disk counters are updated before showing results
+- ✅ **Color-Coded Output** - Visual feedback based on amount freed
+- ✅ **GUI Updates** - Enhanced completion dialog with accuracy details
+
+### Technical Improvements
+- Double-sync on Unix for maximum safety
+- Garbage collection forcing on Windows
+- Platform-specific folder size calculation using `du` command
+- Environment variable integration for accurate reporting
+- Enhanced error handling and recovery
+
+The tool now provides **honest, accurate results** that reflect the true state of your SSD/HDD!
 
 ---
 
@@ -264,5 +275,5 @@ MIT License - Free to use, modify, and distribute
 
 Made with ❤️ for Windows, macOS, and Linux users worldwide
 
-**Version:** 5.0.0 (Stable Production Release)
-**Release Date:** 2025
+**Version:** 5.3.0 (Stable Production Release)
+**Release Date:** April 2026

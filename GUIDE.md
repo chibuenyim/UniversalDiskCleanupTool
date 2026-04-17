@@ -127,7 +127,7 @@ chmod +x start-gui.sh
 ### Windows GUI
 ```
 ┌─────────────────────────────────────────┐
-│  🧹 Universal Disk Cleanup Tool v5.1   │
+│  🧹 Universal Disk Cleanup Tool v5.3.0 │
 ├─────────────────────────────────────────┤
 │  Free up to 45 GB of disk space safely │
 │                                         │
@@ -174,7 +174,7 @@ chmod +x start-gui.sh
 ### Linux/macOS GUI (Zenity)
 ```
 ┌─────────────────────────────────────────┐
-│  Universal Disk Cleanup Tool v5.1      │
+│  Universal Disk Cleanup Tool v5.3.0    │
 ├─────────────────────────────────────────┤
 │  Choose what to clean:                  │
 │                                         │
