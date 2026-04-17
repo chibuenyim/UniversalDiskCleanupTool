@@ -13,8 +13,8 @@
 ### Windows:
 1. Download from: https://github.com/chibuenyim/UniversalDiskCleanupTool/releases
 2. Extract ZIP
-3. Double-click `START.bat`
-4. Cleanup starts automatically!
+3. **Double-click `START.bat`**
+4. **A beautiful GUI will open** - choose what to clean and click Start!
 
 ### macOS:
 ```bash
@@ -69,12 +69,14 @@ chmod +x start.sh
 
 ## ✨ Features
 
+- **Beautiful GUI** - Windows users get a graphical interface (NEW!)
 - **Cross-Platform** - Works on Windows, macOS, and Linux
 - **Easy to Use** - Simple launcher for each platform
 - **Safe** - Never deletes your documents or personal files
 - **Fast** - Cleans in minutes, not hours
 - **Powerful** - Frees up to 45 GB of space
 - **Smart** - Knows exactly what to clean
+- **Dependency Check** - Checks for PowerShell 7+ and helps you install it
 
 ---
 
@@ -115,6 +117,7 @@ chmod +x start.sh
 ### Windows:
 ```
 Double-click START.bat
+A GUI will open - choose what to clean and click Start!
 ```
 
 ### macOS/Linux:
@@ -128,8 +131,9 @@ That's it! The cleanup will start automatically.
 
 ## 📦 What's Included
 
-- `START.bat` - Windows launcher
+- `START.bat` - Windows GUI launcher
 - `start.sh` - Unix launcher  
+- `launcher.ps1` - GUI launcher for Windows
 - `cleanup.ps1` - Cross-platform cleanup script
 - `README.md` - This file
 - `README.txt` - Quick reference
@@ -140,7 +144,8 @@ That's it! The cleanup will start automatically.
 ## 💡 Tips
 
 - **First time?** Just run the launcher
-- **Developer?** Add `--Dev` option for extra cleanup
+- **Windows user?** Double-click START.bat for the GUI
+- **Developer?** Choose "Developer Tools" in the GUI for extra cleanup
 - **Run monthly** for best results
 - **Safe to run anytime**
 
@@ -181,6 +186,8 @@ Freed:   30 GB
 
 ## 🌟 What's New in v5.0
 
+- ✅ **Beautiful GUI** - Windows users now get a graphical interface!
+- ✅ **Dependency checking** - Checks for PowerShell 7+ and helps you install it
 - ✅ **Windows Support** - Now works on Windows too!
 - ✅ **Cleaner interface** - Simplified for all platforms
 - ✅ **Faster cleanup** - Optimized performance
