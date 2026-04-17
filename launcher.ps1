@@ -47,11 +47,11 @@ function Format-Bytes {
     param($bytes)
 
     if ($bytes -ge 1GB) {
-        return "{0:N2} GB" - ($bytes / 1GB)
+        return "{0:N2} GB" -f ($bytes / 1GB)
     } elseif ($bytes -ge 1MB) {
-        return "{0:N2} MB" - ($bytes / 1MB)
+        return "{0:N2} MB" -f ($bytes / 1MB)
     } else {
-        return "{0:N2} KB" - ($bytes / 1KB)
+        return "{0:N2} KB" -f ($bytes / 1KB)
     }
 }
 
@@ -92,7 +92,7 @@ function Show-PreviewDialog {
     # Estimated space
     $spaceLabel = New-Object System.Windows.Forms.Label
     $spaceLabel.Text = "Estimated space to be freed: $(Format-Bytes ($EstimatedSpace * 1MB))"
-    $spaceLabel.Location = New-Object System.Drawing.Point(20, $y + 10)
+    $spaceLabel.Location = New-Object System.Drawing.Point @(20, ($y + 10))
     $spaceLabel.Size = New-Object System.Drawing.Size(450, 30)
     $spaceLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
     $spaceLabel.ForeColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
