@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Universal Disk Cleanup Tool v5.5.0 - Cross-platform disk cleanup utility with accurate space measurement
+    Universal Disk Cleanup Tool v5.6.0 - Cross-platform disk cleanup utility with accurate space measurement
 .DESCRIPTION
     Comprehensive cleanup for Windows, macOS, and Linux with advanced features:
     - 60+ application cache locations
@@ -48,7 +48,7 @@ param(
 # CONFIGURATION
 # =============================================
 $script:Config = @{
-    Version = "5.5.0"
+    Version = "5.6.0"
     LastRun = $null
     TotalCleaned = 0
     ScanResults = @{}
@@ -270,7 +270,7 @@ function Show-Progress {
 # =============================================
 function Show-Help {
     Write-Host @"
-Universal Disk Cleanup Tool v5.5.0
+Universal Disk Cleanup Tool v5.6.0
 ================================
 
 USAGE:
@@ -595,8 +595,7 @@ function Invoke-WindowsCleanup {
         )
 
         foreach ($path in $tempPaths) {
-            $freed = Remove-FolderSafe -Path $path -Description $path
-            $totalFreed += $freed
+            Remove-FolderSafe -Path $path -Description $path
         }
     }
 
@@ -618,8 +617,7 @@ function Invoke-WindowsCleanup {
         foreach ($browser in $browsers.Keys) {
             foreach ($path in $browsers[$browser]) {
                 if (Test-Path $path) {
-                    $freed = Remove-FolderSafe -Path $path -Description "$browser cache"
-                    $totalFreed += $freed
+                    Remove-FolderSafe -Path $path -Description "$browser cache"
                 }
             }
         }
@@ -630,7 +628,7 @@ function Invoke-WindowsCleanup {
         Show-Progress -Activity "Cleaning developer caches" -PercentComplete (++$progress / $maxProgress * 100)
         Write-Host "Cleaning developer caches..." -ForegroundColor Cyan
 
-        # Package managers
+        # Package managers - clean without fake measurements
         $devPaths = @{
             "npm" = "$env:APPDATA\npm-cache"
             "yarn" = "$env:LOCALAPPDATA\Yarn\Cache"
@@ -651,22 +649,16 @@ function Invoke-WindowsCleanup {
             $path = $devPaths[$tool]
             if ($tool -eq "npm" -and (Get-Command npm -ErrorAction SilentlyContinue)) {
                 try {
-                    $before = Get-FolderSize $path
                     npm cache clean --force *> $null
-                    Start-Sleep -Milliseconds 500
-                    $after = Get-FolderSize $path
-                    $freed = $before - $after
-                    $totalFreed += $freed
-                    if ($Verbose) { Write-Success "  Cleaned $tool - Freed $(Format-Bytes $freed)" }
+                    Write-Success "  Cleaned $tool cache"
                 } catch {}
             } elseif ($tool -eq "pip" -and (Get-Command pip -ErrorAction SilentlyContinue)) {
                 try {
                     pip cache purge *> $null
-                    if ($Verbose) { Write-Success "  Cleaned $tool cache" }
+                    Write-Success "  Cleaned $tool cache"
                 } catch {}
             } else {
-                $freed = Remove-FolderSafe -Path $path -Description $tool
-                $totalFreed += $freed
+                Remove-FolderSafe -Path $path -Description $tool
             }
         }
 
@@ -679,8 +671,7 @@ function Invoke-WindowsCleanup {
         )
 
         foreach ($path in $devTools) {
-            $freed = Remove-FolderSafe -Path $path -Description "Dev tools"
-            $totalFreed += $freed
+            Remove-FolderSafe -Path $path -Description "Dev tools"
         }
 
         # Docker
@@ -711,8 +702,7 @@ function Invoke-WindowsCleanup {
 
         foreach ($app in $appPaths.Keys) {
             $path = $appPaths[$app]
-            $freed = Remove-FolderSafe -Path $path -Description $app
-            $totalFreed += $freed
+            Remove-FolderSafe -Path $path -Description $app
         }
     }
 
@@ -728,8 +718,7 @@ function Invoke-WindowsCleanup {
         )
 
         foreach ($path in $sysPaths) {
-            $freed = Remove-FolderSafe -Path $path -Description "System files"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description "System files"
         }
 
         # Thumbnail cache
@@ -737,7 +726,6 @@ function Invoke-WindowsCleanup {
         if (Test-Path $thumbPath) {
             Get-ChildItem -Path $thumbPath -Filter "thumbcache*.db" -ErrorAction SilentlyContinue | ForEach-Object {
                 try {
-                    $totalFreed += $_.Length
                     if (-not $DryRun -and -not $ScanOnly) {
                         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
                     }
@@ -766,8 +754,7 @@ function Invoke-WindowsCleanup {
         try {
             Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
             $wuPath = "C:\Windows\SoftwareDistribution\Download"
-            $freed = Remove-FolderSafe -Path $wuPath -Description "Windows Update"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $wuPath -Description "Windows Update"
             Start-Service -Name wuauserv -ErrorAction SilentlyContinue
 
             Write-Info "  Running DISM cleanup (may take 10-30 minutes)..."
@@ -802,8 +789,7 @@ function Invoke-MacOSCleanup {
         )
 
         foreach ($path in $tempPaths) {
-            $freed = Remove-FolderSafe -Path $path -Description $path -Sudo $true
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description $path -Sudo $true
         }
     }
 
@@ -826,8 +812,7 @@ function Invoke-MacOSCleanup {
         foreach ($browser in $browsers.Keys) {
             foreach ($path in $browsers[$browser]) {
                 if (Test-Path $path) {
-                    $freed = Remove-FolderSafe -Path $path -Description "$browser cache"
-                    $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description "$browser cache"
                 }
             }
         }
@@ -847,7 +832,6 @@ function Invoke-MacOSCleanup {
                 }
                 $after = Get-FolderSize "$env:HOME/.npm"
                 $freed = $before - $after
-                $totalFreed += $freed
                 if ($Verbose) { Write-Success "  Cleaned npm - Freed $(Format-Bytes $freed)" }
             } catch {}
         }
@@ -893,36 +877,31 @@ function Invoke-MacOSCleanup {
         # CocoaPods
         $cocoaPath = "$env:HOME/Library/Caches/CocoaPods"
         if (Test-Path $cocoaPath) {
-            $freed = Remove-FolderSafe -Path $cocoaPath -Description "CocoaPods"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $cocoaPath -Description "CocoaPods"
         }
 
         # Carthage
         $carthagePath = "$env:HOME/Library/Caches/org.carthage.CarthageKit"
         if (Test-Path $carthagePath) {
-            $freed = Remove-FolderSafe -Path $carthagePath -Description "Carthage"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $carthagePath -Description "Carthage"
         }
 
         # Swift Package Manager
         $swiftPath = "$env:HOME/Library/Developer/Xcode/DerivedData"
         if (Test-Path $swiftPath) {
-            $freed = Remove-FolderSafe -Path $swiftPath -Description "Xcode DerivedData" -Sudo $true
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $swiftPath -Description "Xcode DerivedData" -Sudo $true
         }
 
         # Go modules
         $goPath = "$env:HOME/go/pkg/mod"
         if (Test-Path $goPath) {
-            $freed = Remove-FolderSafe -Path $goPath -Description "Go modules"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $goPath -Description "Go modules"
         }
 
         # Cargo
         $cargoPath = "$env:HOME/.cargo/registry"
         if (Test-Path $cargoPath) {
-            $freed = Remove-FolderSafe -Path $cargoPath -Description "Cargo"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $cargoPath -Description "Cargo"
         }
 
         # Docker
@@ -939,15 +918,13 @@ function Invoke-MacOSCleanup {
         # Gradle
         $gradlePath = "$env:HOME/.gradle/caches"
         if (Test-Path $gradlePath) {
-            $freed = Remove-FolderSafe -Path $gradlePath -Description "Gradle"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $gradlePath -Description "Gradle"
         }
 
         # Maven
         $mavenPath = "$env:HOME/.m2/repository"
         if (Test-Path $mavenPath) {
-            $freed = Remove-FolderSafe -Path $mavenPath -Description "Maven"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $mavenPath -Description "Maven"
         }
     }
 
@@ -970,8 +947,7 @@ function Invoke-MacOSCleanup {
         foreach ($app in $appPaths.Keys) {
             $path = $appPaths[$app]
             if (Test-Path $path) {
-                $freed = Remove-FolderSafe -Path $path -Description $app
-                $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description $app
             }
         }
     }
@@ -990,8 +966,7 @@ function Invoke-MacOSCleanup {
         )
 
         foreach ($path in $logPaths) {
-            $freed = Remove-FolderSafe -Path $path -Description "Logs" -Sudo $true
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description "Logs" -Sudo $true
         }
 
         # Font cache
@@ -1006,8 +981,7 @@ function Invoke-MacOSCleanup {
         # Thumbnail cache
         $thumbPath = "$env:HOME/Library/Caches/com.apple.ichat"
         if (Test-Path $thumbPath) {
-            $freed = Remove-FolderSafe -Path $thumbPath -Description "Thumbnails"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $thumbPath -Description "Thumbnails"
         }
 
         # iOS device backups
@@ -1186,8 +1160,7 @@ function Invoke-LinuxCleanup {
         $tempPaths = @("/tmp", "/var/tmp", "$env:HOME/.cache", "$env:HOME/.thumbnails")
 
         foreach ($path in $tempPaths) {
-            $freed = Remove-FolderSafe -Path $path -Description $path -Sudo $true
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description $path -Sudo $true
         }
     }
 
@@ -1208,8 +1181,7 @@ function Invoke-LinuxCleanup {
         foreach ($browser in $browsers.Keys) {
             foreach ($path in $browsers[$browser]) {
                 if (Test-Path $path) {
-                    $freed = Remove-FolderSafe -Path $path -Description "$browser cache"
-                    $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description "$browser cache"
                 }
             }
         }
@@ -1229,7 +1201,6 @@ function Invoke-LinuxCleanup {
                 }
                 $after = Get-FolderSize "$env:HOME/.npm"
                 $freed = $before - $after
-                $totalFreed += $freed
                 if ($Verbose) { Write-Success "  Cleaned npm - Freed $(Format-Bytes $freed)" }
             } catch {}
         }
@@ -1243,7 +1214,6 @@ function Invoke-LinuxCleanup {
                 }
                 $after = Get-FolderSize "$env:HOME/.yarn/cache"
                 $freed = $before - $after
-                $totalFreed += $freed
                 if ($Verbose) { Write-Success "  Cleaned yarn - Freed $(Format-Bytes $freed)" }
             } catch {}
         }
@@ -1291,29 +1261,25 @@ function Invoke-LinuxCleanup {
         # Go modules
         $goPath = "$env:HOME/go/pkg/mod"
         if (Test-Path $goPath) {
-            $freed = Remove-FolderSafe -Path $goPath -Description "Go modules"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $goPath -Description "Go modules"
         }
 
         # Cargo
         $cargoPath = "$env:HOME/.cargo/registry"
         if (Test-Path $cargoPath) {
-            $freed = Remove-FolderSafe -Path $cargoPath -Description "Cargo"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $cargoPath -Description "Cargo"
         }
 
         # Gradle
         $gradlePath = "$env:HOME/.gradle/caches"
         if (Test-Path $gradlePath) {
-            $freed = Remove-FolderSafe -Path $gradlePath -Description "Gradle"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $gradlePath -Description "Gradle"
         }
 
         # Maven
         $mavenPath = "$env:HOME/.m2/repository"
         if (Test-Path $mavenPath) {
-            $freed = Remove-FolderSafe -Path $mavenPath -Description "Maven"
-            $totalFreed += $freed
+        Remove-FolderSafe -Path $mavenPath -Description "Maven"
         }
 
         # Docker
@@ -1346,8 +1312,7 @@ function Invoke-LinuxCleanup {
         foreach ($app in $appPaths.Keys) {
             $path = $appPaths[$app]
             if (Test-Path $path) {
-                $freed = Remove-FolderSafe -Path $path -Description $app
-                $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description $app
             }
         }
     }
@@ -1366,7 +1331,6 @@ function Invoke-LinuxCleanup {
             }
             $after = Get-FolderSize "/var/log/journal"
             $freed = $before - $after
-            $totalFreed += $freed
             if ($Verbose) { Write-Success "  Cleaned journals - Freed $(Format-Bytes $freed)" }
         } catch {
             Write-WarningOutput "  Could not clean journals (requires sudo)"
@@ -1376,8 +1340,7 @@ function Invoke-LinuxCleanup {
         $thumbPaths = @("$env:HOME/.cache/thumbnails", "$env:HOME/.thumbnails")
         foreach ($path in $thumbPaths) {
             if (Test-Path $path) {
-                $freed = Remove-FolderSafe -Path $path -Description "Thumbnails"
-                $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description "Thumbnails"
             }
         }
 
@@ -1406,8 +1369,7 @@ function Invoke-LinuxCleanup {
 
         foreach ($path in $logPaths) {
             if (Test-Path $path) {
-                $freed = Remove-FolderSafe -Path $path -Description "Logs" -Sudo $true
-                $totalFreed += $freed
+        Remove-FolderSafe -Path $path -Description "Logs" -Sudo $true
             }
         }
     }
@@ -1419,7 +1381,7 @@ function Invoke-LinuxCleanup {
 if (-not $Quiet) {
     Write-Info ""
     Write-Info "╔════════════════════════════════════════╗"
-    Write-Info "║  Universal Disk Cleanup Tool v5.5.0     ║"
+    Write-Info "║  Universal Disk Cleanup Tool v5.6.0     ║"
     Write-Info "║  Advanced Features                    ║"
     Write-Info "╚════════════════════════════════════════╝"
     Write-Info ""

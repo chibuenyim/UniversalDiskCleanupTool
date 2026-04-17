@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-#  Universal Disk Cleanup Tool v5.5.0
+#  Universal Disk Cleanup Tool v5.6.0
 #  Run this script to start!
 # ============================================
 
@@ -16,7 +16,7 @@ NC='\033[0m'
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║                                                        ║${NC}"
-echo -e "${CYAN}║     Universal Disk Cleanup Tool v5.5.0                   ║${NC}"
+echo -e "${CYAN}║     Universal Disk Cleanup Tool v5.6.0                   ║${NC}"
 echo -e "${CYAN}║                                                        ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
