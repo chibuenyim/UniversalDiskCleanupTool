@@ -180,7 +180,7 @@ function Show-MainForm {
 
     # Start button
     $startBtn = New-Object System.Windows.Forms.Button
-    $startBtn.Text = "▶ Start Cleanup"
+    $startBtn.Text = "Start Start Cleanup"
     $startBtn.Location = New-Object System.Drawing.Point(20, 380)
     $startBtn.Size = New-Object System.Drawing.Size(260, 50)
     $startBtn.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
@@ -233,7 +233,7 @@ function Show-MainForm {
 
     # Status bar
     $status = New-Object System.Windows.Forms.Label
-    $status.Text = "✓ Ready to clean"
+    $status.Text = "[OK] Ready to clean"
     $status.Location = New-Object System.Drawing.Point(20, 440)
     $status.Size = New-Object System.Drawing.Size(560, 20)
     $status.Font = New-Object System.Drawing.Font("Segoe UI", 9)
