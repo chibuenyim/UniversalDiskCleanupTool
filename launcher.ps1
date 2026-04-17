@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Universal Disk Cleanup Tool v5.0 - GUI Launcher
+    Universal Disk Cleanup Tool v5.2 - GUI Launcher
 .DESCRIPTION
-    Beautiful GUI launcher with dependency checking
+    Beautiful GUI launcher with space estimation and multiple selection
 #>
 
 #Requires -PSEdition Core
@@ -25,19 +25,42 @@ Add-Type -AssemblyName System.Drawing
 # FUNCTIONS
 # =============================================
 
-function Test-PowerShellCore {
-    try {
-        $null = Get-Command pwsh -ErrorAction Stop
-        return $true
-    } catch {
-        return $false
+function Get-SpaceEstimation {
+    param($Selections)
+
+    $totalMB = 0
+
+    foreach ($sel in $Selections) {
+        switch ($sel) {
+            "Temp" { $totalMB += 1500 }
+            "Browser" { $totalMB += 1150 }
+            "Dev" { $totalMB += 16500 }
+            "System" { $totalMB += 5000 }
+            "All" { $totalMB += 25000 }
+        }
+    }
+
+    return $totalMB
+}
+
+function Format-Bytes {
+    param($bytes)
+
+    if ($bytes -ge 1GB) {
+        return "{0:N2} GB" - ($bytes / 1GB)
+    } elseif ($bytes -ge 1MB) {
+        return "{0:N2} MB" - ($bytes / 1MB)
+    } else {
+        return "{0:N2} KB" - ($bytes / 1KB)
     }
 }
 
-function Show-DependencyDialog {
+function Show-PreviewDialog {
+    param($Selections, $EstimatedSpace)
+
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "PowerShell Core Not Found"
-    $form.Size = New-Object System.Drawing.Size(500, 350)
+    $form.Text = "Cleanup Preview"
+    $form.Size = New-Object System.Drawing.Size(500, 400)
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
@@ -46,60 +69,129 @@ function Show-DependencyDialog {
 
     # Title
     $title = New-Object System.Windows.Forms.Label
-    $title.Text = "PowerShell Core Required"
+    $title.Text = "Cleanup Preview"
     $title.Location = New-Object System.Drawing.Point(20, 20)
     $title.Size = New-Object System.Drawing.Size(450, 30)
     $title.Font = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($title)
 
-    # Message
-    $message = New-Object System.Windows.Forms.Label
-    $message.Text = "This tool requires PowerShell 7+ (pwsh) to run.`n`nWindows PowerShell (the default) is not supported."
-    $message.Location = New-Object System.Drawing.Point(20, 70)
-    $message.Size = New-Object System.Drawing.Size(450, 60)
-    $message.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-    $message.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-    $form.Controls.Add($message)
+    # Items to clean
+    $y = 70
+    foreach ($sel in $Selections) {
+        $item = New-Object System.Windows.Forms.Label
+        $item.Text = "  - $sel"
+        $item.Location = New-Object System.Drawing.Point(40, $y)
+        $item.Size = New-Object System.Drawing.Size(400, 20)
+        $item.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+        $item.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
+        $form.Controls.Add($item)
+        $y += 25
+    }
 
-    # Download button
-    $downloadBtn = New-Object System.Windows.Forms.Button
-    $downloadBtn.Text = "Download PowerShell 7+"
-    $downloadBtn.Location = New-Object System.Drawing.Point(20, 150)
-    $downloadBtn.Size = New-Object System.Drawing.Size(200, 40)
-    $downloadBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $downloadBtn.FlatStyle = "Flat"
-    $downloadBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-    $downloadBtn.ForeColor = [System.Drawing.Color]::White
-    $downloadBtn.Cursor = "Hand"
-    $downloadBtn.Add_Click({
-        Start-Process "https://github.com/PowerShell/PowerShell/releases/latest"
-    })
-    $form.Controls.Add($downloadBtn)
+    # Estimated space
+    $spaceLabel = New-Object System.Windows.Forms.Label
+    $spaceLabel.Text = "Estimated space to be freed: $(Format-Bytes ($EstimatedSpace * 1MB))"
+    $spaceLabel.Location = New-Object System.Drawing.Point(20, $y + 10)
+    $spaceLabel.Size = New-Object System.Drawing.Size(450, 30)
+    $spaceLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $spaceLabel.ForeColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
+    $form.Controls.Add($spaceLabel)
 
-    # Close button
-    $closeBtn = New-Object System.Windows.Forms.Button
-    $closeBtn.Text = "Close"
-    $closeBtn.Location = New-Object System.Drawing.Point(240, 150)
-    $closeBtn.Size = New-Object System.Drawing.Size(200, 40)
-    $closeBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-    $closeBtn.FlatStyle = "Flat"
-    $closeBtn.BackColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
-    $closeBtn.ForeColor = [System.Drawing.Color]::White
-    $closeBtn.Cursor = "Hand"
-    $closeBtn.Add_Click({
+    # Confirm button
+    $confirmBtn = New-Object System.Windows.Forms.Button
+    $confirmBtn.Text = "Confirm & Cleanup"
+    $confirmBtn.Location = New-Object System.Drawing.Point(20, 300)
+    $confirmBtn.Size = New-Object System.Drawing.Size(210, 45)
+    $confirmBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $confirmBtn.FlatStyle = "Flat"
+    $confirmBtn.BackColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
+    $confirmBtn.ForeColor = [System.Drawing.Color]::White
+    $confirmBtn.Cursor = "Hand"
+    $confirmBtn.Add_Click({
+        $form.Tag = "Confirm"
         $form.Close()
     })
-    $form.Controls.Add($closeBtn)
+    $form.Controls.Add($confirmBtn)
 
-    # Info
-    $info = New-Object System.Windows.Forms.Label
-    $info.Text = "After installing, restart this application."
-    $info.Location = New-Object System.Drawing.Point(20, 210)
-    $info.Size = New-Object System.Drawing.Size(450, 30)
-    $info.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    $info.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
-    $form.Controls.Add($info)
+    # Cancel button
+    $cancelBtn = New-Object System.Windows.Forms.Button
+    $cancelBtn.Text = "Cancel"
+    $cancelBtn.Location = New-Object System.Drawing.Point(250, 300)
+    $cancelBtn.Size = New-Object System.Drawing.Size(210, 45)
+    $cancelBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $cancelBtn.FlatStyle = "Flat"
+    $cancelBtn.BackColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
+    $cancelBtn.ForeColor = [System.Drawing.Color]::White
+    $cancelBtn.Cursor = "Hand"
+    $cancelBtn.Add_Click({
+        $form.Tag = "Cancel"
+        $form.Close()
+    })
+    $form.Controls.Add($cancelBtn)
+
+    $form.Tag = ""
+    $form.ShowDialog() | Out-Null
+
+    return $form.Tag -eq "Confirm"
+}
+
+function Show-CompletionDialog {
+    param($SpaceFreed)
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Cleanup Complete"
+    $form.Size = New-Object System.Drawing.Size(450, 300)
+    $form.StartPosition = "CenterScreen"
+    $form.FormBorderStyle = "FixedDialog"
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+    $form.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+
+    # Success icon
+    $icon = New-Object System.Windows.Forms.Label
+    $icon.Text = "[OK]"
+    $icon.Location = New-Object System.Drawing.Point(180, 30)
+    $icon.Size = New-Object System.Drawing.Size(80, 50)
+    $icon.Font = New-Object System.Drawing.Font("Segoe UI", 24, [System.Drawing.FontStyle]::Bold)
+    $icon.ForeColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
+    $icon.TextAlign = "MiddleCenter"
+    $form.Controls.Add($icon)
+
+    # Title
+    $title = New-Object System.Windows.Forms.Label
+    $title.Text = "Cleanup Complete!"
+    $title.Location = New-Object System.Drawing.Point(20, 100)
+    $title.Size = New-Object System.Drawing.Size(400, 30)
+    $title.Font = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
+    $title.ForeColor = [System.Drawing.Color]::White
+    $title.TextAlign = "MiddleCenter"
+    $form.Controls.Add($title)
+
+    # Space freed
+    $spaceLabel = New-Object System.Windows.Forms.Label
+    $spaceLabel.Text = "Space freed: $(Format-Bytes $SpaceFreed)"
+    $spaceLabel.Location = New-Object System.Drawing.Point(20, 140)
+    $spaceLabel.Size = New-Object System.Drawing.Size(400, 30)
+    $spaceLabel.Font = New-Object System.Drawing.Font("Segoe UI", 12)
+    $spaceLabel.ForeColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
+    $spaceLabel.TextAlign = "MiddleCenter"
+    $form.Controls.Add($spaceLabel)
+
+    # OK button
+    $okBtn = New-Object System.Windows.Forms.Button
+    $okBtn.Text = "OK"
+    $okBtn.Location = New-Object System.Drawing.Point(125, 200)
+    $okBtn.Size = New-Object System.Drawing.Size(200, 40)
+    $okBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $okBtn.FlatStyle = "Flat"
+    $okBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+    $okBtn.ForeColor = [System.Drawing.Color]::White
+    $okBtn.Cursor = "Hand"
+    $okBtn.Add_Click({
+        $form.Close()
+    })
+    $form.Controls.Add($okBtn)
 
     $form.ShowDialog() | Out-Null
     $form.Dispose()
@@ -108,8 +200,8 @@ function Show-DependencyDialog {
 function Show-MainForm {
     # Create main form
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Universal Disk Cleanup Tool v5.0"
-    $form.Size = New-Object System.Drawing.Size(600, 500)
+    $form.Text = "Universal Disk Cleanup Tool v5.2"
+    $form.Size = New-Object System.Drawing.Size(550, 520)
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
@@ -118,110 +210,177 @@ function Show-MainForm {
 
     # Title
     $title = New-Object System.Windows.Forms.Label
-    $title.Text = "🧹 Universal Disk Cleanup Tool"
+    $title.Text = "Universal Disk Cleanup Tool"
     $title.Location = New-Object System.Drawing.Point(20, 20)
-    $title.Size = New-Object System.Drawing.Size(560, 40)
-    $title.Font = New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)
+    $title.Size = New-Object System.Drawing.Size(500, 30)
+    $title.Font = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($title)
 
     # Subtitle
     $subtitle = New-Object System.Windows.Forms.Label
-    $subtitle.Text = "Free up to 45 GB of disk space safely"
-    $subtitle.Location = New-Object System.Drawing.Point(20, 65)
-    $subtitle.Size = New-Object System.Drawing.Size(560, 25)
-    $subtitle.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $subtitle.Text = "Select items to clean (multiple selection allowed)"
+    $subtitle.Location = New-Object System.Drawing.Point(20, 55)
+    $subtitle.Size = New-Object System.Drawing.Size(500, 20)
+    $subtitle.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
     $form.Controls.Add($subtitle)
 
-    # Cleanup options
-    $yPos = 110
+    # Cleanup options (Checkboxes for multiple selection)
+    $yPos = 90
 
     $options = @(
-        @{Name = "Quick Cleanup"; Desc = "Clean everything (recommended)"; All = $true},
-        @{Name = "Temporary Files"; Desc = "System temp files and caches"; Temp = $true},
-        @{Name = "Browser Caches"; Desc = "Chrome, Firefox, Edge, Safari"; Browser = $true},
-        @{Name = "Developer Tools"; Desc = "npm, pip, cargo, maven, etc."; Dev = $true},
-        @{Name = "System Files"; Desc = "Logs, thumbnails, recycle bin"; System = $true}
+        @{Name = "Quick Cleanup"; Desc = "Clean everything"; Key = "All"},
+        @{Name = "Temporary Files"; Desc = "500 MB - 3 GB"; Key = "Temp"},
+        @{Name = "Browser Caches"; Desc = "300 MB - 2 GB"; Key = "Browser"},
+        @{Name = "Developer Tools"; Desc = "8 - 25 GB"; Key = "Dev"},
+        @{Name = "System Files"; Desc = "2 - 8 GB"; Key = "System"}
     )
 
-    $radioButtons = @()
+    $checkBoxes = @()
 
     foreach ($opt in $options) {
-        $radio = New-Object System.Windows.Forms.RadioButton
-        $radio.Location = New-Object System.Drawing.Point(20, $yPos)
-        $radio.Size = New-Object System.Drawing.Size(400, 25)
-        $radio.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-        $radio.ForeColor = [System.Drawing.Color]::White
-        $radio.Text = $opt.Name
-        $radio.BackColor = [System.Drawing.Color]::Transparent
+        $cb = New-Object System.Windows.Forms.CheckBox
+        $cb.Location = New-Object System.Drawing.Point(20, $yPos)
+        $cb.Size = New-Object System.Drawing.Size(480, 24)
+        $cb.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+        $cb.ForeColor = [System.Drawing.Color]::White
+        $cb.Text = "$($opt.Name) - $($opt.Desc)"
+        $cb.BackColor = [System.Drawing.Color]::Transparent
+        $cb.Tag = $opt.Key
 
-        # Store the option data
-        $radio.Tag = $opt
-
-        if ($opt.All) {
-            $radio.Checked = $true
+        if ($opt.Key -eq "All") {
+            $cb.Checked = $true
         }
 
-        $form.Controls.Add($radio)
-        $radioButtons += $radio
+        $form.Controls.Add($cb)
+        $checkBoxes += $cb
 
-        # Description
-        $desc = New-Object System.Windows.Forms.Label
-        $desc.Location = New-Object System.Drawing.Point(40, $yPos + 22)
-        $desc.Size = New-Object System.Drawing.Size(520, 20)
-        $desc.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $desc.ForeColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
-        $desc.Text = $opt.Desc
-        $form.Controls.Add($desc)
-
-        $yPos += 50
+        $yPos += 30
     }
 
-    # Start button
-    $startBtn = New-Object System.Windows.Forms.Button
-    $startBtn.Text = "Start Start Cleanup"
-    $startBtn.Location = New-Object System.Drawing.Point(20, 380)
-    $startBtn.Size = New-Object System.Drawing.Size(260, 50)
-    $startBtn.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
-    $startBtn.FlatStyle = "Flat"
-    $startBtn.BackColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
-    $startBtn.ForeColor = [System.Drawing.Color]::White
-    $startBtn.Cursor = "Hand"
-    $startBtn.Add_Click({
-        $selected = $radioButtons | Where-Object { $_.Checked } | Select-Object -First 1
+    # Select All button
+    $selectAllBtn = New-Object System.Windows.Forms.Button
+    $selectAllBtn.Text = "Select All"
+    $selectAllBtn.Location = New-Object System.Drawing.Point(20, 250)
+    $selectAllBtn.Size = New-Object System.Drawing.Size(120, 35)
+    $selectAllBtn.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $selectAllBtn.FlatStyle = "Flat"
+    $selectAllBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+    $selectAllBtn.ForeColor = [System.Drawing.Color]::White
+    $selectAllBtn.Cursor = "Hand"
+    $selectAllBtn.Add_Click({
+        foreach ($cb in $checkBoxes) {
+            $cb.Checked = $true
+        }
+    })
+    $form.Controls.Add($selectAllBtn)
 
-        if ($selected) {
-            $opt = $selected.Tag
+    # Clear All button
+    $clearAllBtn = New-Object System.Windows.Forms.Button
+    $clearAllBtn.Text = "Clear All"
+    $clearAllBtn.Location = New-Object System.Drawing.Point(150, 250)
+    $clearAllBtn.Size = New-Object System.Drawing.Size(120, 35)
+    $clearAllBtn.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $clearAllBtn.FlatStyle = "Flat"
+    $clearAllBtn.BackColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
+    $clearAllBtn.ForeColor = [System.Drawing.Color]::White
+    $clearAllBtn.Cursor = "Hand"
+    $clearAllBtn.Add_Click({
+        foreach ($cb in $checkBoxes) {
+            $cb.Checked = $false
+        }
+    })
+    $form.Controls.Add($clearAllBtn)
 
-            # Build arguments
-            $args = @()
-            if ($opt.All) { $args += "--All" }
-            elseif ($opt.Temp) { $args += "--Temp" }
-            elseif ($opt.Browser) { $args += "--Browser" }
-            elseif ($opt.Dev) { $args += "--Dev" }
-            elseif ($opt.System) { $args += "--System" }
+    # Preview button
+    $previewBtn = New-Object System.Windows.Forms.Button
+    $previewBtn.Text = "Preview & Cleanup"
+    $previewBtn.Location = New-Object System.Drawing.Point(20, 300)
+    $previewBtn.Size = New-Object System.Drawing.Size(480, 50)
+    $previewBtn.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $previewBtn.FlatStyle = "Flat"
+    $previewBtn.BackColor = [System.Drawing.Color]::FromArgb(16, 185, 129)
+    $previewBtn.ForeColor = [System.Drawing.Color]::White
+    $previewBtn.Cursor = "Hand"
+    $previewBtn.Add_Click({
+        # Get selected options
+        $selected = $checkBoxes | Where-Object { $_.Checked } | ForEach-Object { $_.Tag }
 
-            # Close form
+        if ($selected.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Please select at least one option.",
+                "No Selection",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            )
+            return
+        }
+
+        # If "All" is selected, don't include individual options
+        if ($selected -contains "All") {
+            $selected = @("All")
+        }
+
+        # Get space estimation
+        $estimatedMB = Get-SpaceEstimation -Selections $selected
+
+        # Show preview dialog
+        $confirmed = Show-PreviewDialog -Selections $selected -EstimatedSpace $estimatedMB
+
+        if ($confirmed) {
+            # Close main form
             $form.Close()
 
-            # Run cleanup
+            # Build arguments
+            $argsList = @()
+            foreach ($sel in $selected) {
+                $argsList += "--$sel"
+            }
+
+            # Run cleanup and capture output
             Write-Host "Starting cleanup..." -ForegroundColor Green
-            & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/cleanup.ps1" @args
+            Write-Host ""
+
+            $output = & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/cleanup.ps1" @argsList 2>&1
+
+            # Try to parse space freed from output
+            $spaceFreed = 0
+            foreach ($line in $output) {
+                if ($line -match "(\d+(?:\.\d+)?)\s*(GB|MB|KB)\s+freed") {
+                    $value = [double]$Matches[1]
+                    $unit = $Matches[2]
+
+                    switch ($unit) {
+                        "GB" { $spaceFreed = $value * 1GB }
+                        "MB" { $spaceFreed = $value * 1MB }
+                        "KB" { $spaceFreed = $value * 1KB }
+                    }
+                    break
+                }
+            }
+
+            # If we couldn't parse it, use estimation
+            if ($spaceFreed -eq 0) {
+                $spaceFreed = $estimatedMB * 1MB
+            }
 
             Write-Host ""
             Write-Host "Cleanup complete!" -ForegroundColor Green
-            Read-Host "Press Enter to exit"
+            Write-Host "Space freed: $(Format-Bytes $spaceFreed)" -ForegroundColor Cyan
+
+            # Show completion dialog
+            Show-CompletionDialog -SpaceFreed $spaceFreed
         }
     })
-    $form.Controls.Add($startBtn)
+    $form.Controls.Add($previewBtn)
 
     # Cancel button
     $cancelBtn = New-Object System.Windows.Forms.Button
     $cancelBtn.Text = "Cancel"
-    $cancelBtn.Location = New-Object System.Drawing.Point(300, 380)
-    $cancelBtn.Size = New-Object System.Drawing.Size(240, 50)
-    $cancelBtn.Font = New-Object System.Drawing.Font("Segoe UI", 11)
+    $cancelBtn.Location = New-Object System.Drawing.Point(20, 370)
+    $cancelBtn.Size = New-Object System.Drawing.Size(480, 40)
+    $cancelBtn.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $cancelBtn.FlatStyle = "Flat"
     $cancelBtn.BackColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
     $cancelBtn.ForeColor = [System.Drawing.Color]::White
@@ -234,8 +393,8 @@ function Show-MainForm {
     # Status bar
     $status = New-Object System.Windows.Forms.Label
     $status.Text = "[OK] Ready to clean"
-    $status.Location = New-Object System.Drawing.Point(20, 440)
-    $status.Size = New-Object System.Drawing.Size(560, 20)
+    $status.Location = New-Object System.Drawing.Point(20, 430)
+    $status.Size = New-Object System.Drawing.Size(500, 20)
     $status.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $status.ForeColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
     $form.Controls.Add($status)
@@ -243,16 +402,6 @@ function Show-MainForm {
     # Show form
     $form.ShowDialog() | Out-Null
     $form.Dispose()
-}
-
-# =============================================
-# MAIN
-# =============================================
-
-# Check for PowerShell Core
-if (-not (Test-PowerShellCore)) {
-    Show-DependencyDialog
-    exit 1
 }
 
 # Show main form

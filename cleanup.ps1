@@ -22,6 +22,7 @@
 #Requires -Version 7
 
 param(
+    [switch]$FixAll,
     [switch]$All,
     [switch]$Temp,
     [switch]$Browser,

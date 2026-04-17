@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-#  Universal Disk Cleanup Tool v5.0
+#  Universal Disk Cleanup Tool v5.2
 #  Run this script to start!
 # ============================================
 
@@ -16,7 +16,7 @@ NC='\033[0m'
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║                                                        ║${NC}"
-echo -e "${CYAN}║     🧹 Universal Disk Cleanup Tool v5.0                ║${NC}"
+echo -e "${CYAN}║     Universal Disk Cleanup Tool v5.2                   ║${NC}"
 echo -e "${CYAN}║                                                        ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
@@ -99,8 +99,25 @@ echo -e "${GREEN}PowerShell found!${NC}"
 echo -e "${GREEN}Starting on $OS...${NC}"
 echo ""
 
-# Run cleanup
-pwsh -File cleanup.ps1 --All
+# Check for arguments
+if [ "$1" == "--FixAll" ]; then
+    echo -e "${CYAN}Running full cleanup (FixAll mode)...${NC}"
+    echo ""
+    pwsh -File cleanup.ps1 --FixAll
+elif [ "$1" == "--Quick" ]; then
+    echo -e "${CYAN}Running quick cleanup...${NC}"
+    echo ""
+    pwsh -File cleanup.ps1 --All
+else
+    echo -e "${CYAN}Usage:${NC}"
+    echo "  ./start.sh           - Interactive mode (not implemented)"
+    echo "  ./start.sh --FixAll  - Clean everything (recommended)"
+    echo "  ./start.sh --Quick   - Quick cleanup"
+    echo ""
+    echo -e "${YELLOW}Running default cleanup...${NC}"
+    echo ""
+    pwsh -File cleanup.ps1 --All
+fi
 
 echo ""
 echo -e "${GREEN}Cleanup complete!${NC}"
