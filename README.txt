@@ -3,24 +3,33 @@
 ║         🧹 UNIVERSAL DISK CLEANUP TOOL v5.0                ║
 ║         ===============================                      ║
 ║                                                              ║
-║         For macOS and Linux                                 ║
-║         Free up to 40 GB of disk space!                    ║
+║         For Windows, macOS, and Linux                       ║
+║         Free up to 45 GB of disk space!                    ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 
 
 QUICK START
-════════════
+══════════════
 
-1. Install PowerShell 7+
-2. Run: ./start.sh
-3. Choose what to clean
-4. Wait for it to finish
-5. Enjoy your free space!
+Windows:
+  1. Double-click START.bat
+  2. Wait for cleanup
+  3. Done!
+
+macOS/Linux:
+  1. Install PowerShell 7+
+  2. Run: ./start.sh
+  3. Wait for cleanup
+  4. Done!
 
 
 INSTALL POWERSHELL
 ═════════════════
+
+Windows:
+  PowerShell 7+ included with Windows 10/11
+  Or download from: https://github.com/PowerShell/PowerShell/releases
 
 macOS:
   brew install powershell
@@ -42,7 +51,7 @@ WHAT IT CLEANS
 ✓ Application caches       → 1-5 GB
 ✓ System files             → 2-8 GB
 
-Total: 20-40 GB of space freed!
+Total: 20-45 GB of space freed!
 
 
 IS IT SAFE?
@@ -65,7 +74,11 @@ It NEVER deletes:
 USAGE
 ═════
 
-./start.sh              → Quick cleanup (everything)
+Windows:
+  START.bat                → Quick cleanup
+
+macOS/Linux:
+  ./start.sh                → Quick cleanup
 
 Or use options:
 pwsh -File cleanup.ps1 --Browser    → Clean browsers
@@ -84,14 +97,14 @@ PRESETS
 TIPS
 ════
 
-• First time? Just run ./start.sh
+• First time? Just run START.bat or ./start.sh
 • Developer? Add --Dev for extra cleanup
 • Run monthly for best results
 • Safe to run anytime
 
 
 TROUBLESHOOTING
-═══════════════
+═════════════════
 
 Permission denied?
   → chmod +x start.sh
@@ -104,7 +117,12 @@ Need more space?
 
 
 EXPECTED RESULTS
-═══════════════
+═════════════════
+
+Windows:
+  Before:  5 GB free
+  After:   30 GB free
+  Freed:   25 GB
 
 macOS:
   Before:  8 GB free
@@ -127,6 +145,7 @@ Issues:  https://github.com/chibuenyim/UniversalDiskCleanupTool/issues
 VERSION 5.0.0
 ═════════════
 
+✓ Cross-platform (Windows, macOS, Linux)
 ✓ Cleaner interface
 ✓ Faster cleanup
 ✓ Better progress tracking
