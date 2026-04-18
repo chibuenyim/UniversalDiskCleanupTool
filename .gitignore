@@ -1,0 +1,39 @@
+# User-specific files
+*.bak
+*.old
+*.tmp
+*.log
+
+# Build artifacts
+build/
+dist/
+*.exe
+*.msi
+
+# Release artifacts (built by GitHub Actions)
+release-staging/
+*.tar.gz
+*.zip
+UniversalDiskCleanupTool-*.tar.gz
+UniversalDiskCleanupTool-*.zip
+
+# IDE files
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+
+# Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
